@@ -25,7 +25,9 @@ function buildStudentPayload(body) {
   const payload = pick(body, STUDENT_FIELDS);
   if (payload.current_semester !== undefined) {
     payload.current_semester = toOptionalNumber(payload.current_semester);
+    payload.semester = payload.current_semester;
   }
+  if (payload.matricula !== undefined) payload.student_code = payload.matricula;
   return payload;
 }
 
