@@ -7,6 +7,8 @@ export const api = axios.create({
 // Adjunta el JWT a cada petición
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('token');
+  const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (publishableKey) config.headers.apikey = publishableKey;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
