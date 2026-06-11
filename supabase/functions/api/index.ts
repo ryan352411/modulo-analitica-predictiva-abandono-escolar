@@ -430,9 +430,9 @@ Deno.serve(async (req) => {
       const denied = requireRole(user, ["admin"]);
       if (denied) return denied;
       if (req.method === "GET" && parts.length === 1) {
-        const { data, error } = await supabase.from("users").select("id, institution_id, full_name, email, role, is_active, last_login, created_at").eq("institution_id", user.institution_id).order("full_name");
+        const { data, error } = await supabase.from("users").select("id, institution_id, full_name, email, role, is_active, created_at").eq("institution_id", user.institution_id).order("full_name");
         if (error) throw error;
-        return json({ data });
+        return json({ data: (data ?? []).map((item) => ({ ...item, last_login: null })) });
       }
       if (req.method === "POST" && parts.length === 1) {
         const body = await readBody(req);

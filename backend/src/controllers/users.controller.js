@@ -10,12 +10,12 @@ export async function listUsers(req, res, next) {
     const institutionId = requireInstitution(req);
     const { data, error } = await supabase
       .from('users')
-      .select('id, institution_id, full_name, email, role, is_active, last_login, created_at')
+      .select('id, institution_id, full_name, email, role, is_active, created_at')
       .eq('institution_id', institutionId)
       .order('full_name');
 
     if (error) throw error;
-    res.json({ data });
+    res.json({ data: (data ?? []).map((item) => ({ ...item, last_login: null })) });
   } catch (e) {
     next(e);
   }

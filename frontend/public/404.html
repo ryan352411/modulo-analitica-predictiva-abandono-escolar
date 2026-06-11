@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirigiendo...</title>
+    <script>
+      (function () {
+        var base = '/modulo-analitica-predictiva-abandono-escolar/';
+        var path = window.location.pathname;
+        var route = path.indexOf(base) === 0 ? path.slice(base.length - 1) : '/';
+        window.location.replace(base + '#' + route + window.location.search);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
