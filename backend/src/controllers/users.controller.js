@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { supabase } from '../config/supabase.js';
 import { audit } from '../middleware/auditLog.js';
+import { invalidateUserCache } from '../middleware/auth.js';
 import { requireInstitution } from '../utils/request.js';
 
 const ALLOWED_ROLES = new Set(['admin', 'coordinador', 'docente']);
@@ -10,12 +11,12 @@ export async function listUsers(req, res, next) {
     const institutionId = requireInstitution(req);
     const { data, error } = await supabase
       .from('users')
-      .select('id, institution_id, full_name, email, role, is_active, created_at')
+      .select('id, institution_id, full_name, email, role, is_active, last_login, created_at')
       .eq('institution_id', institutionId)
       .order('full_name');
 
     if (error) throw error;
-    res.json({ data: (data ?? []).map((item) => ({ ...item, last_login: null })) });
+    res.json({ data: data ?? [] });
   } catch (e) {
     next(e);
   }
@@ -100,6 +101,7 @@ export async function updateUser(req, res, next) {
     }
     if (error) throw error;
 
+    invalidateUserCache(req.params.id);
     await audit(req, 'UPDATE', 'users', req.params.id, {
       ...patch,
       password_hash: undefined,

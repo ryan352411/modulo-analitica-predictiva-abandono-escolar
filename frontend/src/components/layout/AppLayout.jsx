@@ -1,13 +1,16 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Bell, LogOut, GraduationCap, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Bell, LogOut, GraduationCap, ShieldCheck, AlertTriangle, Cpu, ScrollText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { cn } from '../../lib/utils.js';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/estudiantes', label: 'Estudiantes', icon: Users },
+  { to: '/riesgo-alto', label: 'Riesgo alto', icon: AlertTriangle },
   { to: '/alertas', label: 'Alertas', icon: Bell },
   { to: '/usuarios', label: 'Usuarios', icon: ShieldCheck, adminOnly: true },
+  { to: '/modelo', label: 'Modelo IA', icon: Cpu, adminOnly: true },
+  { to: '/auditoria', label: 'Auditoría', icon: ScrollText, adminOnly: true },
 ];
 
 export default function AppLayout() {

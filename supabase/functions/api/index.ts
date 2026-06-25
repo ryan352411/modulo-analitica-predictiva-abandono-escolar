@@ -5,6 +5,7 @@ import jwt from "npm:jsonwebtoken@9.0.2";
 type User = {
   id: string;
   email: string;
+  full_name?: string;
   role: "admin" | "coordinador" | "docente";
   institution_id: string;
   is_active?: boolean;
@@ -37,6 +38,14 @@ function getSecretKey() {
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const secretKey = getSecretKey();
+// Secreto dedicado para firmar/verificar JWT. Configúralo en los secrets de la
+// Edge Function (idealmente igual al JWT_SECRET del backend Express). Si no está
+// definido, cae a la llave de servicio para no romper sesiones existentes; en
+// ese caso conviene configurar JWT_SECRET cuanto antes por seguridad.
+const jwtSecret = Deno.env.get("JWT_SECRET") || secretKey;
+if (!Deno.env.get("JWT_SECRET")) {
+  console.warn("[auth] JWT_SECRET no configurado; usando la llave de servicio como fallback. Configura JWT_SECRET en los secrets de la función.");
+}
 const supabase = createClient(supabaseUrl, secretKey, {
   auth: { persistSession: false },
 });
@@ -94,10 +103,10 @@ async function authUser(req: Request): Promise<User | Response> {
   if (!token) return json({ error: "Token requerido" }, 401);
 
   try {
-    const decoded = jwt.verify(token, secretKey) as { id?: string };
+    const decoded = jwt.verify(token, jwtSecret) as { id?: string };
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, role, institution_id, is_active")
+      .select("id, email, full_name, role, institution_id, is_active")
       .eq("id", decoded.id)
       .single();
 
@@ -165,18 +174,34 @@ function predictDropoutRisk(input: Record<string, unknown>) {
     alto: 0,
   } as Record<string, number>)[String(input.socioeconomic_level ?? "medio")] ?? 0.03;
 
-  let score = (10 - gpa) * 0.05 +
-    ((100 - attendance) / 100) * 0.3 +
-    Math.min(failed, 5) * 0.05 +
-    (1 - creditRatio) * 0.1 +
-    socioPenalty;
+  const contributions: Record<string, number> = {
+    promedio_general: (10 - gpa) * 0.05,
+    tasa_asistencia: ((100 - attendance) / 100) * 0.3,
+    materias_reprobadas: Math.min(failed, 5) * 0.05,
+    avance_creditos: (1 - creditRatio) * 0.1,
+    nivel_socioeconomico: socioPenalty,
+  };
+  const labels: Record<string, string> = {
+    promedio_general: "Promedio general bajo",
+    tasa_asistencia: "Asistencia irregular",
+    materias_reprobadas: "Materias reprobadas",
+    avance_creditos: "Avance de créditos lento",
+    nivel_socioeconomico: "Nivel socioeconómico",
+  };
 
+  let score = Object.values(contributions).reduce((a, b) => a + b, 0);
   score = Math.max(0, Math.min(1, Number(score.toFixed(4))));
-  const contributing_features = [
-    { feature: "promedio_general", label: "Promedio general bajo", importance: 0.35 },
-    { feature: "tasa_asistencia", label: "Asistencia irregular", importance: 0.27 },
-    { feature: "materias_reprobadas", label: "Materias reprobadas", importance: 0.19 },
-  ];
+
+  const total = Object.values(contributions).reduce((a, b) => a + Math.max(b, 0), 0);
+  const contributing_features = Object.entries(contributions)
+    .map(([feature, value]) => ({ feature, value: Math.max(value, 0) }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 3)
+    .map(({ feature, value }) => ({
+      feature,
+      label: labels[feature],
+      importance: Number((total > 0 ? value / total : 0).toFixed(2)),
+    }));
 
   return {
     risk_score: score,
@@ -187,7 +212,7 @@ function predictDropoutRisk(input: Record<string, unknown>) {
   };
 }
 
-async function audit(user: User | null, req: Request, action: string, entity: string, entityId: string | null, detail = null) {
+async function audit(user: User | null, req: Request, action: string, entity: string, entityId: string | null, detail: unknown = null) {
   await supabase.from("audit_logs").insert({
     user_id: user?.id ?? null,
     action,
@@ -200,9 +225,163 @@ async function audit(user: User | null, req: Request, action: string, entity: st
   });
 }
 
+// ---- Tokens (access + refresh) -------------------------------------------
+const REFRESH_EXPIRES_IN = Deno.env.get("JWT_REFRESH_EXPIRES_IN") || "7d";
+const revokedRefreshTokens = new Set<string>();
+
+function signAccess(u: { id: string; email: string; role: string; institution_id: string }) {
+  return jwt.sign(
+    { id: u.id, email: u.email, role: u.role, institution_id: u.institution_id },
+    jwtSecret,
+    { expiresIn: "8h" },
+  );
+}
+function signRefresh(u: { id: string }) {
+  return jwt.sign({ id: u.id, type: "refresh", jti: crypto.randomUUID() }, jwtSecret, {
+    expiresIn: REFRESH_EXPIRES_IN,
+  });
+}
+
+// ---- Notificaciones (SendGrid / Twilio vía HTTP) -------------------------
+function emailEnabled() {
+  return Boolean(Deno.env.get("SENDGRID_API_KEY") && Deno.env.get("SENDGRID_FROM_EMAIL"));
+}
+
+async function sendEmail(to: string, subject: string, text: string) {
+  if (!emailEnabled()) {
+    console.info(`[notificaciones:email:fallback] Para: ${to} | ${subject} — ${text}`);
+    return;
+  }
+  try {
+    const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${Deno.env.get("SENDGRID_API_KEY")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: Deno.env.get("SENDGRID_FROM_EMAIL") },
+        subject,
+        content: [{ type: "text/plain", value: text }],
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) throw new Error(`SendGrid respondió ${res.status}`);
+  } catch (e) {
+    console.warn(`[notificaciones:email] fallo enviando a ${to}: ${(e as Error).message}`);
+  }
+}
+
+async function notifyHighRisk(student: Record<string, unknown>, prediction: Record<string, unknown>) {
+  try {
+    const { data: recipients } = await supabase
+      .from("users")
+      .select("email, role")
+      .eq("institution_id", student.institution_id)
+      .eq("is_active", true)
+      .in("role", ["admin", "coordinador"]);
+    if (!recipients?.length) return;
+
+    const pct = (Number(prediction.risk_score) * 100).toFixed(1);
+    const subject = `Riesgo alto de abandono: ${student.full_name}`;
+    const text =
+      `El estudiante ${student.full_name} (${student.matricula ?? "s/matrícula"}) ` +
+      `alcanzó un riesgo de ${pct}% (nivel ${prediction.risk_level}). ` +
+      `Se recomienda intervención del tutor.`;
+    await Promise.all(
+      recipients.filter((r: { email?: string }) => r.email).map((r: { email: string }) => sendEmail(r.email, subject, text)),
+    );
+  } catch (e) {
+    console.error("[notificaciones:notifyHighRisk]", (e as Error).message);
+  }
+}
+
+// ---- CSV ------------------------------------------------------------------
+function csvToObjects(text: string): Record<string, string>[] {
+  const src = String(text).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  const pushField = () => { row.push(field); field = ""; };
+  const pushRow = () => { rows.push(row); row = []; };
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (inQuotes) {
+      if (c === '"') { if (src[i + 1] === '"') { field += '"'; i++; } else inQuotes = false; }
+      else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ",") pushField();
+    else if (c === "\n") { pushField(); pushRow(); }
+    else field += c;
+  }
+  if (field.length > 0 || row.length > 0) { pushField(); pushRow(); }
+  const clean = rows.filter((r) => r.some((cell) => cell.trim() !== ""));
+  if (!clean.length) return [];
+  const headers = clean[0].map((h) => h.trim());
+  return clean.slice(1).map((cells) => {
+    const obj: Record<string, string> = {};
+    headers.forEach((h, idx) => { obj[h] = (cells[idx] ?? "").trim(); });
+    return obj;
+  });
+}
+
+function objectsToCsv(items: Record<string, unknown>[], columns: string[]): string {
+  const escape = (value: unknown) => {
+    const s = value === null || value === undefined ? "" : String(value);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const header = columns.map(escape).join(",");
+  const lines = items.map((item) => columns.map((col) => escape(item[col])).join(","));
+  return [header, ...lines].join("\n");
+}
+
+// ---- Predicción reutilizable ---------------------------------------------
+async function runPrediction(student: Record<string, unknown>, userId: string) {
+  const { data: records } = await supabase
+    .from("academic_records")
+    .select("*")
+    .eq("student_id", student.id)
+    .order("period", { ascending: false })
+    .limit(1);
+  if (!records?.length) return { prediction: null as Record<string, unknown> | null };
+
+  const result = predictDropoutRisk({ ...records[0], socioeconomic_level: student.socioeconomic_level });
+  const { data: prediction, error } = await supabase
+    .from("predictions")
+    .insert({ student_id: student.id, generated_by: userId, ...result })
+    .select()
+    .single();
+  if (error) throw error;
+
+  if (result.risk_level === "alto") {
+    await supabase.from("alerts").insert({
+      student_id: student.id,
+      prediction_id: prediction.id,
+      severity: result.risk_score >= 0.85 ? "critica" : "alta",
+      alert_type: "academic",
+      title: `Riesgo alto de abandono: ${student.full_name}`,
+      message: `El modelo estimo un riesgo de ${(result.risk_score * 100).toFixed(1)}%. Se recomienda intervencion del tutor.`,
+      status: "pendiente",
+    });
+    await notifyHighRisk(student, prediction);
+  }
+  return { prediction };
+}
+
+async function mlFetch(path: string, options: RequestInit = {}, timeout = 8000) {
+  const url = Deno.env.get("ML_SERVICE_URL");
+  if (!url) return null;
+  const res = await fetch(`${url}${path}`, { ...options, signal: AbortSignal.timeout(timeout) });
+  if (!res.ok) throw new Error(`ML service respondió ${res.status}`);
+  return res.json();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (!secretKey || !supabaseUrl) return json({ error: "Servidor sin configuracion Supabase" }, 500);
+  if (!jwtSecret) return json({ error: "Servidor sin JWT_SECRET configurado" }, 500);
 
   const url = new URL(req.url);
   const path = url.pathname
@@ -232,15 +411,13 @@ Deno.serve(async (req) => {
         return json({ error: "Credenciales invalidas" }, 401);
       }
 
-      const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role, institution_id: user.institution_id },
-        secretKey,
-        { expiresIn: "8h" },
-      );
+      const token = signAccess(user);
+      const refresh_token = signRefresh(user);
       await supabase.from("users").update({ last_login: new Date().toISOString() }).eq("id", user.id);
       await audit({ id: user.id } as User, req, "LOGIN", "users", user.id);
       return json({
         token,
+        refresh_token,
         user: {
           id: user.id,
           full_name: user.full_name,
@@ -251,12 +428,40 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (req.method === "POST" && path === "/auth/refresh") {
+      const body = await readBody(req);
+      const refresh_token = String(body.refresh_token ?? "");
+      if (!refresh_token) return json({ error: "refresh_token requerido" }, 400);
+      if (revokedRefreshTokens.has(refresh_token)) return json({ error: "Refresh token revocado" }, 401);
+      let decoded: { id?: string; type?: string };
+      try {
+        decoded = jwt.verify(refresh_token, jwtSecret) as { id?: string; type?: string };
+      } catch {
+        return json({ error: "Refresh token invalido o expirado" }, 401);
+      }
+      if (decoded.type !== "refresh") return json({ error: "Token no es de tipo refresh" }, 401);
+      const { data: u, error } = await supabase
+        .from("users")
+        .select("id, email, role, institution_id, is_active")
+        .eq("id", decoded.id)
+        .single();
+      if (error || !u?.is_active) return json({ error: "Usuario invalido o inactivo" }, 401);
+      return json({ token: signAccess(u) });
+    }
+
     const auth = await authUser(req);
     if (auth instanceof Response) return auth;
     const user = auth;
 
     if (req.method === "GET" && path === "/auth/me") {
       return json({ user });
+    }
+
+    if (req.method === "POST" && path === "/auth/logout") {
+      const body = await readBody(req);
+      if (body.refresh_token) revokedRefreshTokens.add(String(body.refresh_token));
+      await audit(user, req, "LOGOUT", "users", user.id);
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
 
     if (req.method === "GET" && path === "/dashboard/summary") {
@@ -300,6 +505,56 @@ Deno.serve(async (req) => {
         if (error) throw error;
         await audit(user, req, "CREATE", "students", data.id, body);
         return json({ data }, 201);
+      }
+
+      if (req.method === "POST" && parts[1] === "import") {
+        const denied = requireRole(user, ["admin", "coordinador"]);
+        if (denied) return denied;
+        const csv = await req.text();
+        if (!csv.trim()) return json({ error: "Envia el CSV como cuerpo con Content-Type text/csv" }, 400);
+        const rows = csvToObjects(csv);
+        if (!rows.length) return json({ error: "El CSV no contiene filas de datos" }, 400);
+        if (rows.length > 1000) return json({ error: "Maximo 1000 estudiantes por importacion" }, 400);
+
+        const payloads: Record<string, unknown>[] = [];
+        const errors: { row: number; error: string }[] = [];
+        rows.forEach((raw, idx) => {
+          const payload = buildStudentPayload(raw, user.institution_id);
+          if (!payload.matricula || !payload.full_name) {
+            errors.push({ row: idx + 2, error: "matricula y full_name son obligatorios" });
+            return;
+          }
+          payloads.push(payload);
+        });
+        if (!payloads.length) return json({ error: "Ninguna fila valida", errors }, 400);
+
+        const { data, error } = await supabase
+          .from("students")
+          .upsert(payloads, { onConflict: "matricula" })
+          .select("id, matricula, full_name");
+        if (error) throw error;
+        await audit(user, req, "IMPORT", "students", null, { imported: data.length, errors: errors.length });
+        return json({ data: { imported: data.length, students: data, errors } }, 201);
+      }
+
+      if (req.method === "GET" && parts.length === 3 && parts[2] === "trend") {
+        const { error: sErr } = await getScopedStudent(parts[1], user.institution_id);
+        if (sErr) return json({ error: "Estudiante no encontrado" }, 404);
+        const { data, error } = await supabase
+          .from("predictions")
+          .select("risk_score, risk_level, model_version, predicted_at")
+          .eq("student_id", parts[1])
+          .order("predicted_at", { ascending: true });
+        if (error) throw error;
+        return json({
+          data: (data ?? []).map((p) => ({
+            predicted_at: p.predicted_at,
+            risk_score: Number(p.risk_score),
+            risk_percent: Math.round(Number(p.risk_score) * 100),
+            risk_level: p.risk_level,
+            model_version: p.model_version,
+          })),
+        });
       }
 
       const studentId = parts[1];
@@ -360,6 +615,45 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (parts[0] === "predictions" && parts[1] === "batch" && req.method === "POST") {
+      const denied = requireRole(user, ["admin", "coordinador"]);
+      if (denied) return denied;
+      const { data: students, error } = await supabase
+        .from("students").select("*")
+        .eq("institution_id", user.institution_id).eq("status", "activo");
+      if (error) throw error;
+      const summary = { total: students.length, generated: 0, skipped: 0, high_risk: 0 };
+      for (const student of students) {
+        const { prediction } = await runPrediction(student, user.id);
+        if (!prediction) summary.skipped++;
+        else {
+          summary.generated++;
+          if (prediction.risk_level === "alto") summary.high_risk++;
+        }
+      }
+      await audit(user, req, "PREDICT_BATCH", "predictions", null, summary);
+      return json({ data: summary }, 201);
+    }
+
+    if (parts[0] === "predictions" && parts[1] === "high-risk" && req.method === "GET") {
+      const { data, error } = await supabase
+        .from("predictions")
+        .select("*, students!inner(id, full_name, matricula, current_semester, program, institution_id)")
+        .eq("students.institution_id", user.institution_id)
+        .eq("risk_level", "alto")
+        .order("predicted_at", { ascending: false });
+      if (error) throw error;
+      const seen = new Set<string>();
+      const latest: Record<string, unknown>[] = [];
+      for (const p of data ?? []) {
+        if (seen.has(p.student_id)) continue;
+        seen.add(p.student_id);
+        latest.push(p);
+      }
+      latest.sort((a, b) => Number(b.risk_score) - Number(a.risk_score));
+      return json({ data: latest });
+    }
+
     if (parts[0] === "predictions" && parts[1] === "student" && parts[2]) {
       const studentId = parts[2];
       const { data: student, error: sErr } = await getScopedStudent(studentId, user.institution_id);
@@ -372,24 +666,9 @@ Deno.serve(async (req) => {
       }
 
       if (req.method === "POST") {
-        const { data: records, error: rErr } = await supabase.from("academic_records").select("*").eq("student_id", studentId).order("period", { ascending: false }).limit(1);
-        if (rErr) throw rErr;
-        if (!records?.length) return json({ error: "El estudiante necesita al menos un registro academico para generar prediccion" }, 400);
-        const result = predictDropoutRisk({ ...records[0], socioeconomic_level: student.socioeconomic_level });
-        const { data: prediction, error: pErr } = await supabase.from("predictions").insert({ student_id: studentId, generated_by: user.id, ...result }).select().single();
-        if (pErr) throw pErr;
-        if (result.risk_level === "alto") {
-          await supabase.from("alerts").insert({
-            student_id: studentId,
-            prediction_id: prediction.id,
-            severity: result.risk_score >= 0.85 ? "critica" : "alta",
-            alert_type: "academic",
-            title: `Riesgo alto de abandono: ${student.full_name}`,
-            message: `El modelo estimo un riesgo de ${(result.risk_score * 100).toFixed(1)}%. Se recomienda intervencion del tutor.`,
-            status: "pendiente",
-          });
-        }
-        await audit(user, req, "PREDICT", "predictions", prediction.id, { risk: result.risk_level });
+        const { prediction } = await runPrediction(student, user.id);
+        if (!prediction) return json({ error: "El estudiante necesita al menos un registro academico para generar prediccion" }, 400);
+        await audit(user, req, "PREDICT", "predictions", String(prediction.id), { risk: prediction.risk_level });
         return json({ data: prediction }, 201);
       }
     }
@@ -430,9 +709,9 @@ Deno.serve(async (req) => {
       const denied = requireRole(user, ["admin"]);
       if (denied) return denied;
       if (req.method === "GET" && parts.length === 1) {
-        const { data, error } = await supabase.from("users").select("id, institution_id, full_name, email, role, is_active, created_at").eq("institution_id", user.institution_id).order("full_name");
+        const { data, error } = await supabase.from("users").select("id, institution_id, full_name, email, role, is_active, last_login, created_at").eq("institution_id", user.institution_id).order("full_name");
         if (error) throw error;
-        return json({ data: (data ?? []).map((item) => ({ ...item, last_login: null })) });
+        return json({ data: data ?? [] });
       }
       if (req.method === "POST" && parts.length === 1) {
         const body = await readBody(req);
@@ -465,6 +744,121 @@ Deno.serve(async (req) => {
         if (error) return json({ error: "Usuario no encontrado" }, 404);
         return json({ data });
       }
+    }
+
+    if (parts[0] === "audit-logs" && req.method === "GET") {
+      const denied = requireRole(user, ["admin"]);
+      if (denied) return denied;
+      const page = Math.max(Number(url.searchParams.get("page") ?? 1), 1);
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 50), 1), 200);
+      const from = (page - 1) * limit;
+
+      const { data: members } = await supabase.from("users").select("id").eq("institution_id", user.institution_id);
+      const memberIds = (members ?? []).map((m: { id: string }) => m.id);
+      if (!memberIds.length) return json({ data: [], total: 0, page, limit });
+
+      let query = supabase
+        .from("audit_logs")
+        .select("id, user_id, action, entity, entity_id, detail, ip_address, created_at", { count: "exact" })
+        .in("user_id", memberIds)
+        .order("created_at", { ascending: false });
+      const usuario = url.searchParams.get("usuario");
+      const accion = url.searchParams.get("accion");
+      const fi = url.searchParams.get("fecha_inicio");
+      const ff = url.searchParams.get("fecha_fin");
+      if (usuario) query = query.eq("user_id", usuario);
+      if (accion) query = query.eq("action", accion);
+      if (fi) query = query.gte("created_at", fi);
+      if (ff) query = query.lte("created_at", ff);
+      const { data, count, error } = await query.range(from, from + limit - 1);
+      if (error) throw error;
+      return json({ data, total: count, page, limit });
+    }
+
+    if (parts[0] === "reports" && parts[1] === "export" && req.method === "GET") {
+      const denied = requireRole(user, ["admin", "coordinador"]);
+      if (denied) return denied;
+      const type = url.searchParams.get("type") ?? "students";
+      const format = (url.searchParams.get("format") ?? "csv").toLowerCase();
+      if (format !== "csv") {
+        return json({ error: "La Edge Function solo exporta CSV. Usa el backend Express para XLSX/PDF." }, 400);
+      }
+
+      let items: Record<string, unknown>[] = [];
+      let columns: string[] = [];
+      if (type === "students") {
+        columns = ["matricula", "full_name", "email", "program", "current_semester", "socioeconomic_level", "status"];
+        const { data, error } = await supabase
+          .from("students").select(columns.join(", "))
+          .eq("institution_id", user.institution_id).order("full_name");
+        if (error) throw error;
+        items = data ?? [];
+      } else if (type === "predictions") {
+        columns = ["matricula", "full_name", "risk_percent", "risk_level", "model_version", "predicted_at"];
+        const { data, error } = await supabase
+          .from("predictions")
+          .select("risk_score, risk_level, model_version, predicted_at, students!inner(matricula, full_name, institution_id)")
+          .eq("students.institution_id", user.institution_id)
+          .order("predicted_at", { ascending: false }).limit(5000);
+        if (error) throw error;
+        items = (data ?? []).map((p) => ({
+          matricula: p.students.matricula,
+          full_name: p.students.full_name,
+          risk_percent: Math.round(Number(p.risk_score) * 100),
+          risk_level: p.risk_level,
+          model_version: p.model_version,
+          predicted_at: p.predicted_at,
+        }));
+      } else {
+        return json({ error: "type invalido. Opciones: students, predictions" }, 400);
+      }
+
+      await audit(user, req, "EXPORT", type, null, { format, rows: items.length });
+      return new Response(objectsToCsv(items, columns), {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="reporte_${type}.csv"`,
+        },
+      });
+    }
+
+    if (parts[0] === "model" && req.method === "GET" && parts[1] === "info") {
+      const denied = requireRole(user, ["admin"]);
+      if (denied) return denied;
+      const { data: lastPrediction } = await supabase
+        .from("predictions")
+        .select("model_version, predicted_at, students!inner(institution_id)")
+        .eq("students.institution_id", user.institution_id)
+        .order("predicted_at", { ascending: false }).limit(1).maybeSingle();
+
+      let service: Record<string, unknown> = { mode: "edge-stub", available: false };
+      if (Deno.env.get("ML_SERVICE_URL")) {
+        try {
+          const info = await mlFetch("/model-info");
+          service = { mode: "ml-service", available: true, ...(info ?? {}) };
+        } catch (e) {
+          service = { mode: "ml-service", available: false, error: (e as Error).message };
+        }
+      }
+      return json({
+        data: {
+          service,
+          last_used_version: lastPrediction?.model_version ?? null,
+          last_prediction_at: lastPrediction?.predicted_at ?? null,
+        },
+      });
+    }
+
+    if (parts[0] === "model" && req.method === "POST" && parts[1] === "retrain") {
+      const denied = requireRole(user, ["admin"]);
+      if (denied) return denied;
+      if (!Deno.env.get("ML_SERVICE_URL")) {
+        return json({ error: "Reentrenamiento no disponible: configura ML_SERVICE_URL" }, 503);
+      }
+      const result = await mlFetch("/retrain", { method: "POST" }, 120000);
+      await audit(user, req, "RETRAIN", "model", null, result);
+      return json({ data: result });
     }
 
     return json({ error: "Recurso no encontrado" }, 404);

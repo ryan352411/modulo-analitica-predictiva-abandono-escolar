@@ -35,3 +35,16 @@ Respuesta:
 Para entrenar con datos reales, sustituir `generate_synthetic_dataset()`
 por la carga del CSV o consulta a Supabase, conservando las columnas:
 `gpa, attendance_rate, failed_subjects, credit_ratio, socio_level, dropout`.
+
+## ⚠️ Limitaciones del modelo actual
+
+- El modelo se entrena con **datos sintéticos**: el `AUC-ROC` que reporta
+  `train.py` mide el ajuste al *generador* sintético, **no** el desempeño real
+  sobre estudiantes. No es una validación clínica/académica.
+- `contributing_features` usa la **importancia global** del bosque
+  (`feature_importances_`), no la contribución por-predicción (p. ej. SHAP).
+  Indica qué variables pesan en el modelo en general, no por qué *este* alumno
+  obtuvo su score.
+- **No usar para decisiones automáticas de alto impacto** (bajas, sanciones)
+  sin validación con datos históricos reales y revisión humana. El score es una
+  señal de priorización para intervención del tutor, no un veredicto.

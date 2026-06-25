@@ -11,13 +11,15 @@ Uso:
     python -m app.train
 Genera: app/model.joblib y reporta AUC-ROC en consola.
 """
+from datetime import datetime, timezone
+
 import numpy as np
 import pandas as pd
 import joblib
 from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, recall_score
 
 RNG = np.random.default_rng(42)
 SOCIO_MAP = {"bajo": 0, "medio_bajo": 1, "medio": 2, "medio_alto": 3, "alto": 4}
@@ -55,7 +57,7 @@ def generate_synthetic_dataset(n: int = 6000) -> pd.DataFrame:
     })
 
 
-def main() -> None:
+def main() -> dict:
     df = generate_synthetic_dataset()
     X, y = df[FEATURES], df["dropout"]
     X_train, X_test, y_train, y_test = train_test_split(
@@ -68,11 +70,25 @@ def main() -> None:
     )
     model.fit(X_train, y_train)
 
-    auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
-    print(f"AUC-ROC en prueba: {auc:.4f}")
+    proba = model.predict_proba(X_test)[:, 1]
+    preds = (proba >= 0.5).astype(int)
+    metrics = {
+        "auc_roc": round(float(roc_auc_score(y_test, proba)), 4),
+        "accuracy": round(float(accuracy_score(y_test, preds)), 4),
+        "f1": round(float(f1_score(y_test, preds)), 4),
+        "recall": round(float(recall_score(y_test, preds)), 4),
+        "n_train": int(len(X_train)),
+        "n_test": int(len(X_test)),
+    }
+    print(f"Métricas en prueba: {metrics}")
 
-    joblib.dump({"model": model, "features": FEATURES}, MODEL_PATH)
+    trained_at = datetime.now(timezone.utc).isoformat()
+    joblib.dump(
+        {"model": model, "features": FEATURES, "metrics": metrics, "trained_at": trained_at},
+        MODEL_PATH,
+    )
     print(f"Modelo guardado en {MODEL_PATH}")
+    return {"metrics": metrics, "trained_at": trained_at}
 
 
 if __name__ == "__main__":

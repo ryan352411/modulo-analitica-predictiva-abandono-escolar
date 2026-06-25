@@ -18,11 +18,19 @@ export function AuthProvider({ children }) {
   async function login(email, password) {
     const { data } = await api.post('/auth/login', { email, password });
     sessionStorage.setItem('token', data.token);
+    if (data.refresh_token) sessionStorage.setItem('refresh_token', data.refresh_token);
     sessionStorage.setItem('user', JSON.stringify(data.user));
     setUser(data.user);
   }
 
-  function logout() {
+  async function logout() {
+    const refresh_token = sessionStorage.getItem('refresh_token');
+    try {
+      // Revoca el refresh token en el backend; no bloquea el cierre de sesión.
+      await api.post('/auth/logout', { refresh_token });
+    } catch {
+      /* ignorar: cerramos sesión localmente de todas formas */
+    }
     sessionStorage.clear();
     setUser(null);
   }

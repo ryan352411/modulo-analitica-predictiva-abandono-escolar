@@ -98,16 +98,29 @@ El frontend queda en `http://localhost` y Nginx hace proxy de `/api` al backend.
 
 | Metodo | Ruta | Descripcion |
 |---|---|---|
-| POST | `/api/auth/login` | Inicia sesion y devuelve JWT |
+| POST | `/api/auth/login` | Inicia sesion y devuelve access + refresh token |
+| POST | `/api/auth/refresh` | Renueva el access token con el refresh token |
+| POST | `/api/auth/logout` | Revoca el refresh token actual |
 | GET | `/api/auth/me` | Devuelve el usuario autenticado |
 | GET | `/api/students` | Lista estudiantes de la institucion del usuario |
 | GET | `/api/students/:id` | Expediente con registros, predicciones y alertas |
+| GET | `/api/students/:id/trend` | Serie temporal del score de riesgo |
+| POST | `/api/students/import` | Importacion masiva desde CSV (text/csv) |
 | POST | `/api/records` | Crea registro academico para estudiante autorizado |
 | POST | `/api/predictions/student/:id` | Genera prediccion si existe registro academico |
+| POST | `/api/predictions/batch` | Genera predicciones para todos los activos (admin/coord) |
+| GET | `/api/predictions/high-risk` | Estudiantes en riesgo alto ordenados por score |
 | GET | `/api/alerts` | Lista alertas de la institucion |
 | PATCH | `/api/alerts/:id` | Cambia estado de una alerta |
 | GET | `/api/dashboard/summary` | KPIs filtrados por institucion |
 | GET/POST/PATCH | `/api/users` | Gestion de usuarios, solo admin |
+| GET | `/api/model/info` | Estado del modelo y metricas (admin) |
+| POST | `/api/model/retrain` | Dispara reentrenamiento del modelo ML (admin) |
+| GET | `/api/audit-logs` | Lectura del registro de auditoria (admin) |
+| GET | `/api/reports/export` | Exporta CSV/XLSX/PDF (`?type=&format=`) |
+
+Las notificaciones por correo/SMS se activan al configurar `SENDGRID_*` / `TWILIO_*`
+en el `.env`; si se omiten, las alertas de riesgo alto se registran en consola.
 
 ## Verificaciones
 

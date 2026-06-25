@@ -84,6 +84,32 @@ def health():
     return {"status": "ok", "model_loaded": MODEL_PATH.exists()}
 
 
+@app.get("/model-info")
+def model_info():
+    """Metadatos del modelo activo: versión, features y métricas de entrenamiento."""
+    if not MODEL_PATH.exists():
+        return {"trained": False, "model_version": None}
+    bundle = get_bundle()
+    return {
+        "trained": True,
+        "model_version": "rf-v1 (scikit-learn RandomForest)",
+        "features": bundle.get("features", []),
+        "metrics": bundle.get("metrics", {}),
+        "trained_at": bundle.get("trained_at"),
+    }
+
+
+@app.post("/retrain")
+def retrain():
+    """Reentrena el modelo de forma síncrona y recarga el bundle en memoria."""
+    global _bundle
+    from app.train import main as train_main
+
+    metrics = train_main()
+    _bundle = None  # fuerza recarga del nuevo model.joblib en la próxima predicción
+    return {"status": "ok", "retrained": True, **(metrics or {})}
+
+
 @app.post("/predict", response_model=PredictionOutput)
 def predict(payload: PredictionInput):
     bundle = get_bundle()
