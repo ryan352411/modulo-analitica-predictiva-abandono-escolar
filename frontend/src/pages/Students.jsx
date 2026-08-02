@@ -127,12 +127,12 @@ export default function Students() {
                   <td className="px-5 py-3 tabular-nums">{s.matricula}</td>
                   <td className="px-5 py-3">
                     <Link to={`/estudiantes/${s.id}`} className="font-medium text-primary hover:underline">
-                      {s.full_name}
+                      {s.nombre_completo}
                     </Link>
                   </td>
-                  <td className="px-5 py-3 text-ink/70">{s.program}</td>
-                  <td className="px-5 py-3">{s.current_semester}</td>
-                  <td className="px-5 py-3 capitalize">{s.status?.replace('_', ' ')}</td>
+                  <td className="px-5 py-3 text-ink/70">{s.programa}</td>
+                  <td className="px-5 py-3">{s.semestre_actual}</td>
+                  <td className="px-5 py-3 capitalize">{s.estatus?.replace('_', ' ')}</td>
                 </tr>
               ))}
               {data?.data?.length === 0 && (

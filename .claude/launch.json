@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "catalogo-web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "Refaccionaria-NORTE/CatalogoWeb/CatalogoWeb.csproj",
+        "--urls",
+        "http://localhost:5080"
+      ],
+      "port": 5080
+    }
+  ]
+}

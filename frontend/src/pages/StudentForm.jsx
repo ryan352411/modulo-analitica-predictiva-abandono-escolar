@@ -8,15 +8,15 @@ import { useCreateStudent, useUpdateStudent } from '../hooks/useStudentMutations
 
 const EMPTY = {
   matricula: '',
-  full_name: '',
-  email: '',
-  birth_date: '',
-  gender: '',
-  socioeconomic_level: 'medio',
-  enrollment_date: '',
-  current_semester: 1,
-  program: '',
-  status: 'activo',
+  nombre_completo: '',
+  correo: '',
+  fecha_nacimiento: '',
+  genero: '',
+  nivel_socioeconomico: 'medio',
+  fecha_inscripcion: '',
+  semestre_actual: 1,
+  programa: '',
+  estatus: 'activo',
 };
 
 export default function StudentForm() {
@@ -49,11 +49,11 @@ export default function StudentForm() {
     setError('');
     const payload = {
       ...form,
-      current_semester: Number(form.current_semester),
-      birth_date: form.birth_date || null,
-      enrollment_date: form.enrollment_date || null,
-      email: form.email || null,
-      gender: form.gender || null,
+      semestre_actual: Number(form.semestre_actual),
+      fecha_nacimiento: form.fecha_nacimiento || null,
+      fecha_inscripcion: form.fecha_inscripcion || null,
+      correo: form.correo || null,
+      genero: form.genero || null,
     };
     try {
       const saved = await mutation.mutateAsync(payload);
@@ -83,16 +83,16 @@ export default function StudentForm() {
               <Input required value={form.matricula} onChange={set('matricula')} placeholder="UTD2025001" />
             </Field>
             <Field label="Nombre completo">
-              <Input required value={form.full_name} onChange={set('full_name')} />
+              <Input required value={form.nombre_completo} onChange={set('nombre_completo')} />
             </Field>
             <Field label="Correo">
-              <Input type="email" value={form.email} onChange={set('email')} />
+              <Input type="email" value={form.correo} onChange={set('correo')} />
             </Field>
             <Field label="Fecha de nacimiento">
-              <Input type="date" value={form.birth_date || ''} onChange={set('birth_date')} />
+              <Input type="date" value={form.fecha_nacimiento || ''} onChange={set('fecha_nacimiento')} />
             </Field>
             <Field label="Género">
-              <Select value={form.gender || ''} onChange={set('gender')}>
+              <Select value={form.genero || ''} onChange={set('genero')}>
                 <option value="">Sin especificar</option>
                 <option value="femenino">Femenino</option>
                 <option value="masculino">Masculino</option>
@@ -100,7 +100,7 @@ export default function StudentForm() {
               </Select>
             </Field>
             <Field label="Nivel socioeconómico">
-              <Select value={form.socioeconomic_level} onChange={set('socioeconomic_level')}>
+              <Select value={form.nivel_socioeconomico} onChange={set('nivel_socioeconomico')}>
                 <option value="bajo">Bajo</option>
                 <option value="medio_bajo">Medio bajo</option>
                 <option value="medio">Medio</option>
@@ -109,16 +109,16 @@ export default function StudentForm() {
               </Select>
             </Field>
             <Field label="Programa educativo">
-              <Input value={form.program} onChange={set('program')} placeholder="TSU en Tecnologías de la Información" />
+              <Input value={form.programa} onChange={set('programa')} placeholder="TSU en Tecnologías de la Información" />
             </Field>
             <Field label="Semestre actual">
-              <Input type="number" min={1} max={12} required value={form.current_semester} onChange={set('current_semester')} />
+              <Input type="number" min={1} max={12} required value={form.semestre_actual} onChange={set('semestre_actual')} />
             </Field>
             <Field label="Fecha de inscripción">
-              <Input type="date" value={form.enrollment_date || ''} onChange={set('enrollment_date')} />
+              <Input type="date" value={form.fecha_inscripcion || ''} onChange={set('fecha_inscripcion')} />
             </Field>
             <Field label="Estatus">
-              <Select value={form.status} onChange={set('status')}>
+              <Select value={form.estatus} onChange={set('estatus')}>
                 <option value="activo">Activo</option>
                 <option value="baja_temporal">Baja temporal</option>
                 <option value="baja_definitiva">Baja definitiva</option>

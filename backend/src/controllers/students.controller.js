@@ -11,24 +11,24 @@ import {
 
 const STUDENT_FIELDS = [
   'matricula',
-  'full_name',
-  'email',
-  'birth_date',
-  'gender',
-  'socioeconomic_level',
-  'enrollment_date',
-  'current_semester',
-  'program',
-  'status',
+  'nombre_completo',
+  'correo',
+  'fecha_nacimiento',
+  'genero',
+  'nivel_socioeconomico',
+  'fecha_inscripcion',
+  'semestre_actual',
+  'programa',
+  'estatus',
 ];
 
 function buildStudentPayload(body) {
   const payload = pick(body, STUDENT_FIELDS);
-  if (payload.current_semester !== undefined) {
-    payload.current_semester = toOptionalNumber(payload.current_semester);
-    payload.semester = payload.current_semester;
+  if (payload.semestre_actual !== undefined) {
+    payload.semestre_actual = toOptionalNumber(payload.semestre_actual);
+    payload.semestre = payload.semestre_actual;
   }
-  if (payload.matricula !== undefined) payload.student_code = payload.matricula;
+  if (payload.matricula !== undefined) payload.codigo_alumno = payload.matricula;
   return payload;
 }
 
@@ -41,18 +41,18 @@ export async function listStudents(req, res, next) {
     const from = (pageNumber - 1) * limitNumber;
 
     let query = supabase
-      .from('students')
+      .from('alumnos')
       .select('*', { count: 'exact' })
-      .eq('institution_id', institutionId);
+      .eq('institucion_id', institutionId);
 
-    if (status) query = query.eq('status', status);
+    if (status) query = query.eq('estatus', status);
     if (search) {
       const term = sanitizeSearch(search);
-      if (term) query = query.or(`full_name.ilike.%${term}%,matricula.ilike.%${term}%`);
+      if (term) query = query.or(`nombre_completo.ilike.%${term}%,matricula.ilike.%${term}%`);
     }
 
     const { data, count, error } = await query
-      .order('full_name')
+      .order('nombre_completo')
       .range(from, from + limitNumber - 1);
 
     if (error) throw error;
@@ -66,10 +66,10 @@ export async function getStudent(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
     const { data, error } = await supabase
-      .from('students')
-      .select('*, academic_records(*), predictions(*), alerts(*)')
+      .from('alumnos')
+      .select('*, historial_academico(*), predicciones(*), alertas(*)')
       .eq('id', req.params.id)
-      .eq('institution_id', institutionId)
+      .eq('institucion_id', institutionId)
       .single();
 
     if (error) throw mapSingleResultNotFound(error, 'Estudiante');
@@ -84,13 +84,24 @@ export async function createStudent(req, res, next) {
     const institutionId = requireInstitution(req);
     const payload = {
       ...buildStudentPayload(req.body),
-      institution_id: institutionId,
+      institucion_id: institutionId,
     };
 
-    const { data, error } = await supabase.from('students').insert(payload).select().single();
+    // Validación de datos incompletos -> 422 (Unprocessable Entity)
+    const camposFaltantes = [];
+    if (!payload.nombre_completo) camposFaltantes.push('nombre_completo');
+    if (!payload.matricula) camposFaltantes.push('matricula');
+    if (camposFaltantes.length) {
+      return res.status(422).json({
+        error: 'Datos incompletos para crear el estudiante',
+        campos_faltantes: camposFaltantes,
+      });
+    }
+
+    const { data, error } = await supabase.from('alumnos').insert(payload).select().single();
     if (error) throw error;
 
-    await audit(req, 'CREATE', 'students', data.id, payload);
+    await audit(req, 'CREATE', 'alumnos', data.id, payload);
     res.status(201).json({ data });
   } catch (e) {
     next(e);
@@ -103,15 +114,15 @@ export async function updateStudent(req, res, next) {
     const payload = buildStudentPayload(req.body);
 
     const { data, error } = await supabase
-      .from('students')
+      .from('alumnos')
       .update(payload)
       .eq('id', req.params.id)
-      .eq('institution_id', institutionId)
+      .eq('institucion_id', institutionId)
       .select()
       .single();
 
     if (error) throw mapSingleResultNotFound(error, 'Estudiante');
-    await audit(req, 'UPDATE', 'students', req.params.id, payload);
+    await audit(req, 'UPDATE', 'alumnos', req.params.id, payload);
     res.json({ data });
   } catch (e) {
     next(e);
@@ -123,27 +134,27 @@ export async function getStudentTrend(req, res, next) {
     const institutionId = requireInstitution(req);
     // Verifica pertenencia a la institución antes de exponer datos.
     const { data: student, error: sErr } = await supabase
-      .from('students')
+      .from('alumnos')
       .select('id')
       .eq('id', req.params.id)
-      .eq('institution_id', institutionId)
+      .eq('institucion_id', institutionId)
       .single();
     if (sErr || !student) throw mapSingleResultNotFound(sErr ?? {}, 'Estudiante');
 
     const { data, error } = await supabase
-      .from('predictions')
-      .select('risk_score, risk_level, model_version, predicted_at')
-      .eq('student_id', req.params.id)
-      .order('predicted_at', { ascending: true });
+      .from('predicciones')
+      .select('puntaje_riesgo, nivel_riesgo, version_modelo, predicho_en')
+      .eq('alumno_id', req.params.id)
+      .order('predicho_en', { ascending: true });
     if (error) throw error;
 
     res.json({
       data: (data ?? []).map((p) => ({
-        predicted_at: p.predicted_at,
-        risk_score: Number(p.risk_score),
-        risk_percent: Math.round(Number(p.risk_score) * 100),
-        risk_level: p.risk_level,
-        model_version: p.model_version,
+        predicho_en: p.predicho_en,
+        puntaje_riesgo: Number(p.puntaje_riesgo),
+        risk_percent: Math.round(Number(p.puntaje_riesgo) * 100),
+        nivel_riesgo: p.nivel_riesgo,
+        version_modelo: p.version_modelo,
       })),
     });
   } catch (e) {
@@ -153,8 +164,8 @@ export async function getStudentTrend(req, res, next) {
 
 /**
  * Importación masiva desde CSV. El cuerpo se recibe como texto (text/csv).
- * Columnas esperadas (encabezado): matricula, full_name, email, gender,
- * socioeconomic_level, current_semester, program, status, enrollment_date.
+ * Columnas esperadas (encabezado): matricula, nombre_completo, correo, genero,
+ * nivel_socioeconomico, semestre_actual, programa, estatus, fecha_inscripcion.
  */
 export async function importStudents(req, res, next) {
   try {
@@ -176,11 +187,11 @@ export async function importStudents(req, res, next) {
     const errors = [];
     rows.forEach((raw, idx) => {
       const payload = buildStudentPayload(raw);
-      if (!payload.matricula || !payload.full_name) {
-        errors.push({ row: idx + 2, error: 'matricula y full_name son obligatorios' });
+      if (!payload.matricula || !payload.nombre_completo) {
+        errors.push({ row: idx + 2, error: 'matricula y nombre_completo son obligatorios' });
         return;
       }
-      payloads.push({ ...payload, institution_id: institutionId });
+      payloads.push({ ...payload, institucion_id: institutionId });
     });
 
     if (!payloads.length) {
@@ -189,12 +200,12 @@ export async function importStudents(req, res, next) {
 
     // upsert por matricula para que reimportar actualice en lugar de duplicar.
     const { data, error } = await supabase
-      .from('students')
+      .from('alumnos')
       .upsert(payloads, { onConflict: 'matricula' })
-      .select('id, matricula, full_name');
+      .select('id, matricula, nombre_completo');
     if (error) throw error;
 
-    await audit(req, 'IMPORT', 'students', null, { imported: data.length, errors: errors.length });
+    await audit(req, 'IMPORT', 'alumnos', null, { imported: data.length, errors: errors.length });
     res.status(201).json({ data: { imported: data.length, students: data, errors } });
   } catch (e) {
     next(e);
@@ -205,15 +216,15 @@ export async function deleteStudent(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
     const { data, error } = await supabase
-      .from('students')
+      .from('alumnos')
       .delete()
       .eq('id', req.params.id)
-      .eq('institution_id', institutionId)
+      .eq('institucion_id', institutionId)
       .select('id')
       .single();
 
     if (error) throw mapSingleResultNotFound(error, 'Estudiante');
-    await audit(req, 'DELETE', 'students', data.id);
+    await audit(req, 'DELETE', 'alumnos', data.id);
     res.status(204).send();
   } catch (e) {
     next(e);

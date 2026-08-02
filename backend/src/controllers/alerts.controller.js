@@ -6,10 +6,10 @@ const ALLOWED_STATUS = new Set(['pendiente', 'en_atencion', 'resuelta', 'descart
 
 async function assertAlertInInstitution(alertId, institutionId) {
   const { data, error } = await supabase
-    .from('alerts')
-    .select('id, students!inner(id, institution_id)')
+    .from('alertas')
+    .select('id, alumnos!inner(id, institucion_id)')
     .eq('id', alertId)
-    .eq('students.institution_id', institutionId)
+    .eq('alumnos.institucion_id', institutionId)
     .single();
 
   if (error || !data) {
@@ -24,13 +24,13 @@ export async function listAlerts(req, res, next) {
     const institutionId = requireInstitution(req);
     const { status, severity } = req.query;
     let query = supabase
-      .from('alerts')
-      .select('*, students!inner(full_name, matricula, institution_id)')
-      .eq('students.institution_id', institutionId)
-      .order('created_at', { ascending: false });
+      .from('alertas')
+      .select('*, alumnos!inner(nombre_completo, matricula, institucion_id)')
+      .eq('alumnos.institucion_id', institutionId)
+      .order('creado_en', { ascending: false });
 
-    if (status) query = query.eq('status', status);
-    if (severity) query = query.eq('severity', severity);
+    if (status) query = query.eq('estatus', status);
+    if (severity) query = query.eq('severidad', severity);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -50,20 +50,20 @@ export async function updateAlert(req, res, next) {
       return res.status(400).json({ error: 'Estatus de alerta invalido' });
     }
 
-    const patch = { status };
-    if (status === 'en_atencion') patch.assigned_to = req.user.id;
-    if (status === 'resuelta') patch.resolved_at = new Date().toISOString();
-    if (status !== 'resuelta') patch.resolved_at = null;
+    const patch = { estatus: status };
+    if (status === 'en_atencion') patch.asignado_a = req.user.id;
+    if (status === 'resuelta') patch.resuelto_en = new Date().toISOString();
+    if (status !== 'resuelta') patch.resuelto_en = null;
 
     const { data, error } = await supabase
-      .from('alerts')
+      .from('alertas')
       .update(patch)
       .eq('id', req.params.id)
       .select()
       .single();
 
     if (error) throw error;
-    await audit(req, 'UPDATE', 'alerts', req.params.id, patch);
+    await audit(req, 'UPDATE', 'alertas', req.params.id, patch);
     res.json({ data });
   } catch (e) {
     next(e);

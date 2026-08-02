@@ -6,6 +6,8 @@ services:
     build: ./ml-service
     container_name: abandono-ml
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s

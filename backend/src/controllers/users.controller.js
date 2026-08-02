@@ -10,10 +10,10 @@ export async function listUsers(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
     const { data, error } = await supabase
-      .from('users')
-      .select('id, institution_id, full_name, email, role, is_active, last_login, created_at')
-      .eq('institution_id', institutionId)
-      .order('full_name');
+      .from('usuarios')
+      .select('id, institution_id:institucion_id, full_name:nombre_completo, email:correo, role:rol, is_active:activo, last_login:ultimo_acceso, created_at:creado_en')
+      .eq('institucion_id', institutionId)
+      .order('nombre_completo');
 
     if (error) throw error;
     res.json({ data: data ?? [] });
@@ -39,15 +39,15 @@ export async function createUser(req, res, next) {
     const password_hash = await bcrypt.hash(password, 12);
     const normalizedEmail = String(email).trim().toLowerCase();
     const { data, error } = await supabase
-      .from('users')
+      .from('usuarios')
       .insert({
-        full_name,
-        email: normalizedEmail,
-        password_hash,
-        role,
-        institution_id: institutionId,
+        nombre_completo: full_name,
+        correo: normalizedEmail,
+        contrasena_hash: password_hash,
+        rol: role,
+        institucion_id: institutionId,
       })
-      .select('id, institution_id, full_name, email, role, is_active, created_at')
+      .select('id, institution_id:institucion_id, full_name:nombre_completo, email:correo, role:rol, is_active:activo, created_at:creado_en')
       .single();
 
     if (error?.code === '23505') {
@@ -55,7 +55,7 @@ export async function createUser(req, res, next) {
     }
     if (error) throw error;
 
-    await audit(req, 'CREATE', 'users', data.id, { email: normalizedEmail, role });
+    await audit(req, 'CREATE', 'usuarios', data.id, { email: normalizedEmail, role });
     res.status(201).json({ data });
   } catch (e) {
     next(e);
@@ -68,32 +68,32 @@ export async function updateUser(req, res, next) {
     const patch = {};
     const { full_name, role, is_active, password } = req.body;
 
-    if (full_name !== undefined) patch.full_name = full_name;
+    if (full_name !== undefined) patch.nombre_completo = full_name;
     if (role !== undefined) {
       if (!ALLOWED_ROLES.has(role)) return res.status(400).json({ error: 'Rol invalido' });
       if (req.params.id === req.user.id) {
         return res.status(400).json({ error: 'No puedes cambiar tu propio rol' });
       }
-      patch.role = role;
+      patch.rol = role;
     }
-    if (is_active !== undefined) patch.is_active = Boolean(is_active);
+    if (is_active !== undefined) patch.activo = Boolean(is_active);
     if (password) {
       if (password.length < 8) {
         return res.status(400).json({ error: 'La contrasena debe tener al menos 8 caracteres' });
       }
-      patch.password_hash = await bcrypt.hash(password, 12);
+      patch.contrasena_hash = await bcrypt.hash(password, 12);
     }
 
-    if (req.params.id === req.user.id && patch.is_active === false) {
+    if (req.params.id === req.user.id && patch.activo === false) {
       return res.status(400).json({ error: 'No puedes desactivar tu propia cuenta' });
     }
 
     const { data, error } = await supabase
-      .from('users')
+      .from('usuarios')
       .update(patch)
       .eq('id', req.params.id)
-      .eq('institution_id', institutionId)
-      .select('id, institution_id, full_name, email, role, is_active')
+      .eq('institucion_id', institutionId)
+      .select('id, institution_id:institucion_id, full_name:nombre_completo, email:correo, role:rol, is_active:activo')
       .single();
 
     if (error?.code === 'PGRST116') {
@@ -102,9 +102,9 @@ export async function updateUser(req, res, next) {
     if (error) throw error;
 
     invalidateUserCache(req.params.id);
-    await audit(req, 'UPDATE', 'users', req.params.id, {
+    await audit(req, 'UPDATE', 'usuarios', req.params.id, {
       ...patch,
-      password_hash: undefined,
+      contrasena_hash: undefined,
     });
     res.json({ data });
   } catch (e) {

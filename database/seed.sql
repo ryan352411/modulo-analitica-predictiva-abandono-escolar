@@ -1,9 +1,9 @@
 -- Datos de prueba minimos
-INSERT INTO institutions (id, name, code)
+INSERT INTO instituciones (id, nombre, codigo)
 VALUES ('a0000000-0000-0000-0000-000000000001', 'Universidad Tecnologica Demo', 'UTD-001');
 
 -- Contrasena demo: Admin123!
-INSERT INTO users (institution_id, full_name, email, password_hash, role)
+INSERT INTO usuarios (institucion_id, nombre_completo, correo, contrasena_hash, rol)
 VALUES (
   'a0000000-0000-0000-0000-000000000001',
   'Administrador Demo',
@@ -12,8 +12,8 @@ VALUES (
   'admin'
 );
 
--- student_code es NOT NULL; se llena con el mismo valor que matricula.
-INSERT INTO students (institution_id, student_code, matricula, full_name, email, current_semester, semester, program, enrollment_date, socioeconomic_level)
+-- codigo_alumno es NOT NULL; se llena con el mismo valor que matricula.
+INSERT INTO alumnos (institucion_id, codigo_alumno, matricula, nombre_completo, correo, semestre_actual, semestre, programa, fecha_inscripcion, nivel_socioeconomico)
 VALUES
 ('a0000000-0000-0000-0000-000000000001', 'UTD2023001', 'UTD2023001', 'Maria Fernanda Lopez', 'maria.lopez@utdemo.edu.mx', 5, 5, 'TSU en Tecnologias de la Informacion', '2023-09-01', 'medio'),
 ('a0000000-0000-0000-0000-000000000001', 'UTD2023002', 'UTD2023002', 'Carlos Ramirez Soto', 'carlos.ramirez@utdemo.edu.mx', 5, 5, 'TSU en Tecnologias de la Informacion', '2023-09-01', 'medio_bajo'),

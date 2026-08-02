@@ -93,26 +93,26 @@ export async function sendSms({ to, text }) {
 export async function notifyHighRisk(supabase, { student, prediction }) {
   try {
     const { data: recipients } = await supabase
-      .from('users')
-      .select('email, full_name, role')
-      .eq('institution_id', student.institution_id)
-      .eq('is_active', true)
-      .in('role', ['admin', 'coordinador']);
+      .from('usuarios')
+      .select('correo, nombre_completo, rol')
+      .eq('institucion_id', student.institucion_id)
+      .eq('activo', true)
+      .in('rol', ['admin', 'coordinador']);
 
     if (!recipients?.length) return;
 
-    const pct = (Number(prediction.risk_score) * 100).toFixed(1);
-    const subject = `Riesgo alto de abandono: ${student.full_name}`;
+    const pct = (Number(prediction.puntaje_riesgo) * 100).toFixed(1);
+    const subject = `Riesgo alto de abandono: ${student.nombre_completo}`;
     const matricula = student.matricula ?? 's/matrícula';
     const text =
-      `El estudiante ${student.full_name} (${matricula}) ` +
-      `alcanzó un riesgo de ${pct}% (nivel ${prediction.risk_level}). ` +
+      `El estudiante ${student.nombre_completo} (${matricula}) ` +
+      `alcanzó un riesgo de ${pct}% (nivel ${prediction.nivel_riesgo}). ` +
       `Se recomienda intervención del tutor.`;
 
     await Promise.all(
       recipients
-        .filter((r) => r.email)
-        .map((r) => sendEmail({ to: r.email, subject, text }))
+        .filter((r) => r.correo)
+        .map((r) => sendEmail({ to: r.correo, subject, text }))
     );
   } catch (e) {
     console.error('[notificaciones:notifyHighRisk] error:', e.message);

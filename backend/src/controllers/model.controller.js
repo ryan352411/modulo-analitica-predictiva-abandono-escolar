@@ -25,10 +25,10 @@ export async function getModelInfo(req, res, next) {
 
     // Última versión de modelo realmente usada en esta institución.
     const { data: lastPrediction } = await supabase
-      .from('predictions')
-      .select('model_version, predicted_at, students!inner(institution_id)')
-      .eq('students.institution_id', institutionId)
-      .order('predicted_at', { ascending: false })
+      .from('predicciones')
+      .select('version_modelo, predicho_en, alumnos!inner(institucion_id)')
+      .eq('alumnos.institucion_id', institutionId)
+      .order('predicho_en', { ascending: false })
       .limit(1)
       .maybeSingle();
 
@@ -45,8 +45,8 @@ export async function getModelInfo(req, res, next) {
     res.json({
       data: {
         service,
-        last_used_version: lastPrediction?.model_version ?? null,
-        last_prediction_at: lastPrediction?.predicted_at ?? null,
+        last_used_version: lastPrediction?.version_modelo ?? null,
+        last_prediction_at: lastPrediction?.predicho_en ?? null,
       },
     });
   } catch (e) {

@@ -36,25 +36,25 @@ export default function Alerts() {
             <CardBody className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium capitalize', severityStyle[a.severity])}>
-                    {a.severity}
+                  <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium capitalize', severityStyle[a.severidad])}>
+                    {a.severidad}
                   </span>
                   <span className="text-xs text-ink/50">
-                    {new Date(a.created_at).toLocaleString('es-MX')}
+                    {new Date(a.creado_en).toLocaleString('es-MX')}
                   </span>
                 </div>
-                <p className="font-medium">{a.title}</p>
-                {a.message && <p className="text-sm text-ink/70">{a.message}</p>}
-                {a.students && (
-                  <Link to={`/estudiantes/${a.student_id}`} className="text-sm text-primary hover:underline">
-                    Ver expediente de {a.students.full_name} ({a.students.matricula})
+                <p className="font-medium">{a.titulo}</p>
+                {a.mensaje && <p className="text-sm text-ink/70">{a.mensaje}</p>}
+                {a.alumnos && (
+                  <Link to={`/estudiantes/${a.alumno_id}`} className="text-sm text-primary hover:underline">
+                    Ver expediente de {a.alumnos.nombre_completo} ({a.alumnos.matricula})
                   </Link>
                 )}
               </div>
 
               <div className="flex shrink-0 flex-col items-end gap-2">
-                <span className="text-xs capitalize text-ink/60">{a.status.replace('_', ' ')}</span>
-                {a.status === 'pendiente' && (
+                <span className="text-xs capitalize text-ink/60">{a.estatus?.replace('_', ' ')}</span>
+                {a.estatus === 'pendiente' && (
                   <button
                     onClick={() => update.mutate({ id: a.id, status: 'en_atencion' })}
                     className="rounded-md border border-primary px-3 py-1 text-xs text-primary hover:bg-primary-light"
@@ -62,7 +62,7 @@ export default function Alerts() {
                     Tomar en atención
                   </button>
                 )}
-                {a.status === 'en_atencion' && (
+                {a.estatus === 'en_atencion' && (
                   <button
                     onClick={() => update.mutate({ id: a.id, status: 'resuelta' })}
                     className="rounded-md bg-risk-low px-3 py-1 text-xs text-white hover:opacity-90"

@@ -57,11 +57,11 @@ export default function Dashboard() {
               {data.recent_predictions.map((p, i) => (
                 <li key={i} className="flex items-center justify-between py-2 text-sm">
                   <span className="text-ink/70">
-                    {new Date(p.predicted_at).toLocaleString('es-MX')}
+                    {new Date(p.predicho_en).toLocaleString('es-MX')}
                   </span>
                   <div className="flex items-center gap-3">
-                    <span className="tabular-nums">{(p.risk_score * 100).toFixed(1)}%</span>
-                    <RiskBadge level={p.risk_level} />
+                    <span className="tabular-nums">{(p.puntaje_riesgo * 100).toFixed(1)}%</span>
+                    <RiskBadge level={p.nivel_riesgo} />
                   </div>
                 </li>
               ))}

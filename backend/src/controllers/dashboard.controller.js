@@ -7,32 +7,32 @@ export async function getSummary(req, res, next) {
     const [{ count: totalStudents }, { count: activeAlerts }, { data: predictions }] =
       await Promise.all([
         supabase
-          .from('students')
+          .from('alumnos')
           .select('id', { count: 'exact', head: true })
-          .eq('status', 'activo')
-          .eq('institution_id', institutionId),
+          .eq('estatus', 'activo')
+          .eq('institucion_id', institutionId),
         supabase
-          .from('alerts')
-          .select('id, students!inner(institution_id)', { count: 'exact', head: true })
-          .eq('status', 'pendiente')
-          .eq('students.institution_id', institutionId),
+          .from('alertas')
+          .select('id, alumnos!inner(institucion_id)', { count: 'exact', head: true })
+          .eq('estatus', 'pendiente')
+          .eq('alumnos.institucion_id', institutionId),
         supabase
-          .from('predictions')
-          .select('risk_level, risk_score, predicted_at, students!inner(institution_id)')
-          .eq('students.institution_id', institutionId)
-          .order('predicted_at', { ascending: false })
+          .from('predicciones')
+          .select('nivel_riesgo, puntaje_riesgo, predicho_en, alumnos!inner(institucion_id)')
+          .eq('alumnos.institucion_id', institutionId)
+          .order('predicho_en', { ascending: false })
           .limit(500),
       ]);
 
     const distribution = { bajo: 0, medio: 0, alto: 0 };
-    for (const p of predictions ?? []) distribution[p.risk_level]++;
+    for (const p of predictions ?? []) distribution[p.nivel_riesgo]++;
 
     res.json({
       data: {
         total_students: totalStudents ?? 0,
         active_alerts: activeAlerts ?? 0,
         risk_distribution: distribution,
-        recent_predictions: (predictions ?? []).slice(0, 10).map(({ students, ...p }) => p),
+        recent_predictions: (predictions ?? []).slice(0, 10).map(({ alumnos, ...p }) => p),
       },
     });
   } catch (e) {

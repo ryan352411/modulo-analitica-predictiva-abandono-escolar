@@ -6,10 +6,10 @@ import { requireInstitution } from '../utils/request.js';
 
 async function getScopedStudent(studentId, institutionId) {
   const { data, error } = await supabase
-    .from('students')
+    .from('alumnos')
     .select('*')
     .eq('id', studentId)
-    .eq('institution_id', institutionId)
+    .eq('institucion_id', institutionId)
     .single();
 
   if (error || !data) {
@@ -27,10 +27,10 @@ async function getScopedStudent(studentId, institutionId) {
  */
 async function runPrediction(student) {
   const { data: records, error: rErr } = await supabase
-    .from('academic_records')
+    .from('historial_academico')
     .select('*')
-    .eq('student_id', student.id)
-    .order('period', { ascending: false })
+    .eq('alumno_id', student.id)
+    .order('periodo', { ascending: false })
     .limit(1);
 
   if (rErr) throw rErr;
@@ -39,23 +39,23 @@ async function runPrediction(student) {
   const latest = records[0];
   const result = await predictDropoutRisk({
     ...latest,
-    socioeconomic_level: student.socioeconomic_level,
+    nivel_socioeconomico: student.nivel_socioeconomico,
   });
 
   const { data: prediction, error: pErr } = await supabase
-    .from('predictions')
-    .insert({ student_id: student.id, ...result })
+    .from('predicciones')
+    .insert({ alumno_id: student.id, ...result })
     .select()
     .single();
   if (pErr) throw pErr;
 
-  if (result.risk_level === 'alto') {
-    await supabase.from('alerts').insert({
-      student_id: student.id,
-      prediction_id: prediction.id,
-      severity: result.risk_score >= 0.85 ? 'critica' : 'alta',
-      title: `Riesgo alto de abandono: ${student.full_name}`,
-      message: `El modelo estimo un riesgo de ${(result.risk_score * 100).toFixed(1)}%. Se recomienda intervencion del tutor.`,
+  if (result.nivel_riesgo === 'alto') {
+    await supabase.from('alertas').insert({
+      alumno_id: student.id,
+      prediccion_id: prediction.id,
+      severidad: result.puntaje_riesgo >= 0.85 ? 'critica' : 'alta',
+      titulo: `Riesgo alto de abandono: ${student.nombre_completo}`,
+      mensaje: `El modelo estimo un riesgo de ${(result.puntaje_riesgo * 100).toFixed(1)}%. Se recomienda intervencion del tutor.`,
     });
     await notifyHighRisk(supabase, { student, prediction });
   }
@@ -75,9 +75,12 @@ export async function generatePrediction(req, res, next) {
       });
     }
 
-    await audit(req, 'PREDICT', 'predictions', prediction.id, { risk: prediction.risk_level });
+    await audit(req, 'PREDICT', 'predicciones', prediction.id, { risk: prediction.nivel_riesgo });
     res.status(201).json({ data: prediction });
   } catch (e) {
+    if (e.status === 503) {
+      return res.status(503).json({ error: e.message });
+    }
     next(e);
   }
 }
@@ -90,10 +93,10 @@ export async function generateBatch(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
     const { data: students, error } = await supabase
-      .from('students')
+      .from('alumnos')
       .select('*')
-      .eq('institution_id', institutionId)
-      .eq('status', 'activo');
+      .eq('institucion_id', institutionId)
+      .eq('estatus', 'activo');
     if (error) throw error;
 
     const summary = { total: students.length, generated: 0, skipped: 0, high_risk: 0 };
@@ -102,11 +105,11 @@ export async function generateBatch(req, res, next) {
       if (!prediction) summary.skipped++;
       else {
         summary.generated++;
-        if (prediction.risk_level === 'alto') summary.high_risk++;
+        if (prediction.nivel_riesgo === 'alto') summary.high_risk++;
       }
     }
 
-    await audit(req, 'PREDICT_BATCH', 'predictions', null, summary);
+    await audit(req, 'PREDICT_BATCH', 'predicciones', null, summary);
     res.status(201).json({ data: summary });
   } catch (e) {
     next(e);
@@ -121,22 +124,22 @@ export async function listHighRisk(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
     const { data, error } = await supabase
-      .from('predictions')
-      .select('*, students!inner(id, full_name, matricula, current_semester, program, institution_id)')
-      .eq('students.institution_id', institutionId)
-      .eq('risk_level', 'alto')
-      .order('predicted_at', { ascending: false });
+      .from('predicciones')
+      .select('*, alumnos!inner(id, nombre_completo, matricula, semestre_actual, programa, institucion_id)')
+      .eq('alumnos.institucion_id', institutionId)
+      .eq('nivel_riesgo', 'alto')
+      .order('predicho_en', { ascending: false });
     if (error) throw error;
 
     // Conserva solo la predicción más reciente por estudiante.
     const seen = new Set();
     const latestPerStudent = [];
     for (const p of data ?? []) {
-      if (seen.has(p.student_id)) continue;
-      seen.add(p.student_id);
+      if (seen.has(p.alumno_id)) continue;
+      seen.add(p.alumno_id);
       latestPerStudent.push(p);
     }
-    latestPerStudent.sort((a, b) => Number(b.risk_score) - Number(a.risk_score));
+    latestPerStudent.sort((a, b) => Number(b.puntaje_riesgo) - Number(a.puntaje_riesgo));
 
     res.json({ data: latestPerStudent });
   } catch (e) {
@@ -150,10 +153,10 @@ export async function listByStudent(req, res, next) {
     await getScopedStudent(req.params.studentId, institutionId);
 
     const { data, error } = await supabase
-      .from('predictions')
+      .from('predicciones')
       .select('*')
-      .eq('student_id', req.params.studentId)
-      .order('predicted_at', { ascending: false });
+      .eq('alumno_id', req.params.studentId)
+      .order('predicho_en', { ascending: false });
 
     if (error) throw error;
     res.json({ data });

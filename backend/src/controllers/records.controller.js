@@ -3,22 +3,22 @@ import { audit } from '../middleware/auditLog.js';
 import { pick, requireInstitution, toOptionalNumber } from '../utils/request.js';
 
 const RECORD_FIELDS = [
-  'student_id',
-  'period',
-  'gpa',
-  'attendance_rate',
-  'failed_subjects',
-  'credits_earned',
-  'credits_total',
-  'observations',
+  'alumno_id',
+  'periodo',
+  'promedio',
+  'tasa_asistencia',
+  'materias_reprobadas',
+  'creditos_obtenidos',
+  'creditos_totales',
+  'observaciones',
 ];
 
 async function assertStudentInInstitution(studentId, institutionId) {
   const { data, error } = await supabase
-    .from('students')
+    .from('alumnos')
     .select('id')
     .eq('id', studentId)
-    .eq('institution_id', institutionId)
+    .eq('institucion_id', institutionId)
     .single();
 
   if (error || !data) {
@@ -30,7 +30,7 @@ async function assertStudentInInstitution(studentId, institutionId) {
 
 function buildRecordPayload(body) {
   const payload = pick(body, RECORD_FIELDS);
-  for (const key of ['gpa', 'attendance_rate', 'failed_subjects', 'credits_earned', 'credits_total']) {
+  for (const key of ['promedio', 'tasa_asistencia', 'materias_reprobadas', 'creditos_obtenidos', 'creditos_totales']) {
     if (payload[key] !== undefined) payload[key] = toOptionalNumber(payload[key]);
   }
   return payload;
@@ -42,10 +42,10 @@ export async function listByStudent(req, res, next) {
     await assertStudentInInstitution(req.params.studentId, institutionId);
 
     const { data, error } = await supabase
-      .from('academic_records')
+      .from('historial_academico')
       .select('*')
-      .eq('student_id', req.params.studentId)
-      .order('period', { ascending: false });
+      .eq('alumno_id', req.params.studentId)
+      .order('periodo', { ascending: false });
 
     if (error) throw error;
     res.json({ data });
@@ -58,16 +58,16 @@ export async function createRecord(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
     const payload = buildRecordPayload(req.body);
-    await assertStudentInInstitution(payload.student_id, institutionId);
+    await assertStudentInInstitution(payload.alumno_id, institutionId);
 
     const { data, error } = await supabase
-      .from('academic_records')
+      .from('historial_academico')
       .insert(payload)
       .select()
       .single();
 
     if (error) throw error;
-    await audit(req, 'CREATE', 'academic_records', data.id, payload);
+    await audit(req, 'CREATE', 'historial_academico', data.id, payload);
     res.status(201).json({ data });
   } catch (e) {
     next(e);

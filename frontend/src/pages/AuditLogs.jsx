@@ -48,10 +48,10 @@ export default function AuditLogs() {
               {isLoading && <tr><td colSpan={4} className="px-5 py-6 text-ink/50">Cargando…</td></tr>}
               {data?.data?.map((log) => (
                 <tr key={log.id} className="border-b border-ink/5">
-                  <td className="px-5 py-3 text-ink/70">{new Date(log.created_at).toLocaleString('es-MX')}</td>
-                  <td className="px-5 py-3 font-medium">{log.action}</td>
-                  <td className="px-5 py-3 text-ink/70">{log.entity ?? '—'}</td>
-                  <td className="px-5 py-3 text-ink/50 tabular-nums">{log.ip_address ?? '—'}</td>
+                  <td className="px-5 py-3 text-ink/70">{new Date(log.creado_en).toLocaleString('es-MX')}</td>
+                  <td className="px-5 py-3 font-medium">{log.accion}</td>
+                  <td className="px-5 py-3 text-ink/70">{log.entidad ?? '—'}</td>
+                  <td className="px-5 py-3 text-ink/50 tabular-nums">{log.direccion_ip ?? '—'}</td>
                 </tr>
               ))}
               {data?.data?.length === 0 && (

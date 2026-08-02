@@ -32,7 +32,7 @@ export function useCreateRecord(studentId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload) =>
-      (await api.post('/records', { ...payload, student_id: studentId })).data.data,
+      (await api.post('/records', { ...payload, alumno_id: studentId })).data.data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['students', studentId] }),
   });
 }

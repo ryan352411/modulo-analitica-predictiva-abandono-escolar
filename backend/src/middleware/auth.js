@@ -16,8 +16,8 @@ async function loadUser(id) {
   if (cached && cached.expiresAt > Date.now()) return cached.user;
 
   const { data: user, error } = await supabase
-    .from('users')
-    .select('id, email, full_name, role, institution_id, is_active')
+    .from('usuarios')
+    .select('id, email:correo, full_name:nombre_completo, role:rol, institution_id:institucion_id, is_active:activo')
     .eq('id', id)
     .single();
 

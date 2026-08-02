@@ -8,35 +8,35 @@ import { requireInstitution } from '../utils/request.js';
 const DATASETS = {
   students: {
     title: 'Reporte de estudiantes',
-    columns: ['matricula', 'full_name', 'email', 'program', 'current_semester', 'socioeconomic_level', 'status'],
+    columns: ['matricula', 'nombre_completo', 'correo', 'programa', 'semestre_actual', 'nivel_socioeconomico', 'estatus'],
     async fetch(institutionId) {
       const { data, error } = await supabase
-        .from('students')
-        .select('matricula, full_name, email, program, current_semester, socioeconomic_level, status')
-        .eq('institution_id', institutionId)
-        .order('full_name');
+        .from('alumnos')
+        .select('matricula, nombre_completo, correo, programa, semestre_actual, nivel_socioeconomico, estatus')
+        .eq('institucion_id', institutionId)
+        .order('nombre_completo');
       if (error) throw error;
       return data ?? [];
     },
   },
   predictions: {
     title: 'Reporte de predicciones',
-    columns: ['matricula', 'full_name', 'risk_percent', 'risk_level', 'model_version', 'predicted_at'],
+    columns: ['matricula', 'nombre_completo', 'porcentaje_riesgo', 'nivel_riesgo', 'version_modelo', 'predicho_en'],
     async fetch(institutionId) {
       const { data, error } = await supabase
-        .from('predictions')
-        .select('risk_score, risk_level, model_version, predicted_at, students!inner(matricula, full_name, institution_id)')
-        .eq('students.institution_id', institutionId)
-        .order('predicted_at', { ascending: false })
+        .from('predicciones')
+        .select('puntaje_riesgo, nivel_riesgo, version_modelo, predicho_en, alumnos!inner(matricula, nombre_completo, institucion_id)')
+        .eq('alumnos.institucion_id', institutionId)
+        .order('predicho_en', { ascending: false })
         .limit(5000);
       if (error) throw error;
       return (data ?? []).map((p) => ({
-        matricula: p.students.matricula,
-        full_name: p.students.full_name,
-        risk_percent: Math.round(Number(p.risk_score) * 100),
-        risk_level: p.risk_level,
-        model_version: p.model_version,
-        predicted_at: p.predicted_at,
+        matricula: p.alumnos.matricula,
+        nombre_completo: p.alumnos.nombre_completo,
+        porcentaje_riesgo: Math.round(Number(p.puntaje_riesgo) * 100),
+        nivel_riesgo: p.nivel_riesgo,
+        version_modelo: p.version_modelo,
+        predicho_en: p.predicho_en,
       }));
     },
   },

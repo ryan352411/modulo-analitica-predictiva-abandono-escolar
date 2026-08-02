@@ -19,11 +19,11 @@ export default function StudentDetail() {
   if (isLoading) return <p className="text-ink/60">Cargando expediente…</p>;
   if (!student) return <p className="text-risk-high">Estudiante no encontrado.</p>;
 
-  const records = [...(student.academic_records ?? [])].sort((a, b) =>
-    a.period.localeCompare(b.period)
+  const records = [...(student.historial_academico ?? [])].sort((a, b) =>
+    a.periodo.localeCompare(b.periodo)
   );
-  const predictions = [...(student.predictions ?? [])].sort(
-    (a, b) => new Date(b.predicted_at) - new Date(a.predicted_at)
+  const predictions = [...(student.predicciones ?? [])].sort(
+    (a, b) => new Date(b.predicho_en) - new Date(a.predicho_en)
   );
   const latest = predictions[0];
 
@@ -35,13 +35,13 @@ export default function StudentDetail() {
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{student.full_name}</h1>
+          <h1 className="text-2xl font-semibold">{student.nombre_completo}</h1>
           <p className="text-ink/60 text-sm">
-            {student.matricula} · {student.program} · Semestre {student.current_semester}
+            {student.matricula} · {student.programa} · Semestre {student.semestre_actual}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {latest && <RiskBadge level={latest.risk_level} />}
+          {latest && <RiskBadge level={latest.nivel_riesgo} />}
           <Link
             to={`/estudiantes/${id}/editar`}
             className="inline-flex items-center gap-2 rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5"
@@ -83,10 +83,10 @@ export default function StudentDetail() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={records}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="period" fontSize={12} />
+                  <XAxis dataKey="periodo" fontSize={12} />
                   <YAxis domain={[0, 10]} fontSize={12} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="gpa" name="Promedio" stroke="#1E5AA8" strokeWidth={2} />
+                  <Line type="monotone" dataKey="promedio" name="Promedio" stroke="#1E5AA8" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -100,19 +100,19 @@ export default function StudentDetail() {
         <Card>
           <CardHeader
             title="Última predicción"
-            subtitle={latest ? new Date(latest.predicted_at).toLocaleString('es-MX') : 'Sin predicciones'}
+            subtitle={latest ? new Date(latest.predicho_en).toLocaleString('es-MX') : 'Sin predicciones'}
           />
           <CardBody>
             {latest ? (
               <div className="space-y-4">
                 <p className="text-4xl font-semibold tabular-nums">
-                  {(latest.risk_score * 100).toFixed(1)}%
-                  <span className="ml-2 align-middle"><RiskBadge level={latest.risk_level} /></span>
+                  {(latest.puntaje_riesgo * 100).toFixed(1)}%
+                  <span className="ml-2 align-middle"><RiskBadge level={latest.nivel_riesgo} /></span>
                 </p>
                 <div>
                   <p className="text-sm font-medium mb-2">Factores principales</p>
                   <ul className="space-y-1.5">
-                    {(latest.contributing_features ?? []).map((f) => (
+                    {(latest.factores_contribuyentes ?? []).map((f) => (
                       <li key={f.feature} className="flex items-center justify-between text-sm">
                         <span className="text-ink/70">{f.label}</span>
                         <span className="tabular-nums text-ink/50">{(f.importance * 100).toFixed(0)}%</span>
@@ -120,7 +120,7 @@ export default function StudentDetail() {
                     ))}
                   </ul>
                 </div>
-                <p className="text-xs text-ink/40">Modelo: {latest.model_version}</p>
+                <p className="text-xs text-ink/40">Modelo: {latest.version_modelo}</p>
               </div>
             ) : (
               <p className="text-sm text-ink/50">
@@ -146,10 +146,10 @@ export default function StudentDetail() {
             <tbody>
               {predictions.map((p) => (
                 <tr key={p.id} className="border-b border-ink/5">
-                  <td className="px-5 py-3">{new Date(p.predicted_at).toLocaleString('es-MX')}</td>
-                  <td className="px-5 py-3 tabular-nums">{(p.risk_score * 100).toFixed(1)}%</td>
-                  <td className="px-5 py-3"><RiskBadge level={p.risk_level} /></td>
-                  <td className="px-5 py-3 text-ink/60">{p.model_version}</td>
+                  <td className="px-5 py-3">{new Date(p.predicho_en).toLocaleString('es-MX')}</td>
+                  <td className="px-5 py-3 tabular-nums">{(p.puntaje_riesgo * 100).toFixed(1)}%</td>
+                  <td className="px-5 py-3"><RiskBadge level={p.nivel_riesgo} /></td>
+                  <td className="px-5 py-3 text-ink/60">{p.version_modelo}</td>
                 </tr>
               ))}
               {predictions.length === 0 && (

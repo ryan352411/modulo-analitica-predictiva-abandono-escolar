@@ -20,18 +20,18 @@ function riskLevel(score) {
 }
 
 /**
- * @param {object} input — { gpa, attendance_rate, failed_subjects, credits_earned, credits_total, socioeconomic_level }
- * @returns {{ risk_score:number, risk_level:string, model_version:string, contributing_features:Array }}
+ * @param {object} input — { promedio, tasa_asistencia, materias_reprobadas, creditos_obtenidos, creditos_totales, nivel_socioeconomico }
+ * @returns {{ puntaje_riesgo:number, nivel_riesgo:string, version_modelo:string, factores_contribuyentes:Array }}
  */
 export function predictDropoutRisk(input = {}) {
-  const gpa = Number(input.gpa ?? 8);
-  const attendance = Number(input.attendance_rate ?? 90);
-  const failed = Number(input.failed_subjects ?? 0);
+  const gpa = Number(input.promedio ?? 8);
+  const attendance = Number(input.tasa_asistencia ?? 90);
+  const failed = Number(input.materias_reprobadas ?? 0);
   const creditRatio =
-    input.credits_total > 0 ? input.credits_earned / input.credits_total : 1;
+    input.creditos_totales > 0 ? input.creditos_obtenidos / input.creditos_totales : 1;
   const socioPenalty =
     { bajo: 0.10, medio_bajo: 0.06, medio: 0.03, medio_alto: 0.01, alto: 0 }[
-      input.socioeconomic_level
+      input.nivel_socioeconomico
     ] ?? 0.03;
 
   // Heurística simple que imita la salida de un Random Forest.
@@ -49,7 +49,7 @@ export function predictDropoutRisk(input = {}) {
 
   // Top 3 factores que más pesan en ESTE alumno, con importancia relativa.
   const total = Object.values(contributions).reduce((a, b) => a + Math.max(b, 0), 0);
-  const contributing_features = Object.entries(contributions)
+  const factores_contribuyentes = Object.entries(contributions)
     .map(([feature, value]) => ({ feature, value: Math.max(value, 0) }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 3)
@@ -60,9 +60,9 @@ export function predictDropoutRisk(input = {}) {
     }));
 
   return {
-    risk_score: score,
-    risk_level: riskLevel(score),
-    model_version: 'stub-v1 (RandomForest simulado)',
-    contributing_features,
+    puntaje_riesgo: score,
+    nivel_riesgo: riskLevel(score),
+    version_modelo: 'stub-v1 (RandomForest simulado)',
+    factores_contribuyentes,
   };
 }

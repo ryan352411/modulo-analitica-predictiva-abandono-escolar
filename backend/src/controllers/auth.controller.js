@@ -75,10 +75,10 @@ export async function login(req, res, next) {
     }
 
     const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', String(email).trim().toLowerCase())
-      .eq('is_active', true)
+      .from('usuarios')
+      .select('id, email:correo, password_hash:contrasena_hash, full_name:nombre_completo, role:rol, institution_id:institucion_id')
+      .eq('correo', String(email).trim().toLowerCase())
+      .eq('activo', true)
       .single();
 
     if (error || !user || !(await bcrypt.compare(password, user.password_hash))) {
@@ -89,9 +89,9 @@ export async function login(req, res, next) {
     const token = signAccessToken(user);
     const refresh_token = signRefreshToken(user);
 
-    await supabase.from('users').update({ last_login: new Date().toISOString() }).eq('id', user.id);
+    await supabase.from('usuarios').update({ ultimo_acceso: new Date().toISOString() }).eq('id', user.id);
     req.user = { id: user.id };
-    await audit(req, 'LOGIN', 'users', user.id);
+    await audit(req, 'LOGIN', 'usuarios', user.id);
     clearFailedLogins(req, email);
 
     res.json({
@@ -133,8 +133,8 @@ export async function refresh(req, res, next) {
     }
 
     const { data: user, error } = await supabase
-      .from('users')
-      .select('id, email, role, institution_id, is_active')
+      .from('usuarios')
+      .select('id, email:correo, role:rol, institution_id:institucion_id, is_active:activo')
       .eq('id', decoded.id)
       .single();
     if (error || !user?.is_active) {
@@ -154,7 +154,7 @@ export async function logout(req, res, next) {
   try {
     const { refresh_token } = req.body || {};
     if (refresh_token) revokedRefreshTokens.add(refresh_token);
-    await audit(req, 'LOGOUT', 'users', req.user?.id ?? null);
+    await audit(req, 'LOGOUT', 'usuarios', req.user?.id ?? null);
     res.status(204).send();
   } catch (e) {
     next(e);
