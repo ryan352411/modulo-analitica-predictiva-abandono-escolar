@@ -11,6 +11,7 @@ Uso:
     python -m app.train
 Genera: app/model.joblib y reporta AUC-ROC en consola.
 """
+import json
 from datetime import datetime, timezone
 
 import numpy as np
@@ -23,7 +24,10 @@ from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, recall_scor
 
 RNG = np.random.default_rng(42)
 FEATURES = ["attendance_rate", "gpa", "failed_subjects", "pending_deliverables"]
+MODEL_VERSION = "rf-v1 (scikit-learn RandomForest)"
 MODEL_PATH = Path(__file__).parent / "model.joblib"
+# metrics.json queda un nivel arriba de app/ (raíz de ml-service) para consulta rápida.
+METRICS_PATH = Path(__file__).parent.parent / "metrics.json"
 
 
 def generate_synthetic_dataset(n: int = 6000) -> pd.DataFrame:
@@ -75,6 +79,7 @@ def main() -> dict:
         "accuracy": round(float(accuracy_score(y_test, preds)), 4),
         "f1": round(float(f1_score(y_test, preds)), 4),
         "recall": round(float(recall_score(y_test, preds)), 4),
+        "n_samples": int(len(df)),
         "n_train": int(len(X_train)),
         "n_test": int(len(X_test)),
     }
@@ -86,6 +91,23 @@ def main() -> dict:
         MODEL_PATH,
     )
     print(f"Modelo guardado en {MODEL_PATH}")
+
+    # Registro legible de métricas para la API y para la documentación de la tesina.
+    metrics_report = {
+        "model_version": MODEL_VERSION,
+        "features": FEATURES,
+        "accuracy": metrics["accuracy"],
+        "recall": metrics["recall"],
+        "f1": metrics["f1"],
+        "auc_roc": metrics["auc_roc"],
+        "n_samples": metrics["n_samples"],
+        "n_train": metrics["n_train"],
+        "n_test": metrics["n_test"],
+        "trained_at": trained_at,
+    }
+    METRICS_PATH.write_text(json.dumps(metrics_report, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Métricas guardadas en {METRICS_PATH}")
+
     return {"metrics": metrics, "trained_at": trained_at}
 
 

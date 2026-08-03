@@ -1,3 +1,7 @@
 .venv/
 __pycache__/
-app/model.joblib
+
+# El artefacto entrenado se versiona a propósito para que el evaluador de la
+# tesina disponga del modelo sin necesidad de reentrenar. En producción el
+# Dockerfile lo regenera igualmente en build (RUN python -m app.train).
+# app/model.joblib  <- intencionalmente NO ignorado

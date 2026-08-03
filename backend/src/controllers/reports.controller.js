@@ -8,11 +8,11 @@ import { requireInstitution } from '../utils/request.js';
 const DATASETS = {
   students: {
     title: 'Reporte de estudiantes',
-    columns: ['matricula', 'nombre_completo', 'correo', 'programa', 'semestre_actual', 'nivel_socioeconomico', 'estatus'],
+    columns: ['matricula', 'nombre_completo', 'correo', 'programa', 'semestre_actual', 'estatus'],
     async fetch(institutionId) {
       const { data, error } = await supabase
         .from('alumnos')
-        .select('matricula, nombre_completo, correo, programa, semestre_actual, nivel_socioeconomico, estatus')
+        .select('matricula, nombre_completo, correo, programa, semestre_actual, estatus')
         .eq('institucion_id', institutionId)
         .order('nombre_completo');
       if (error) throw error;
