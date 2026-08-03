@@ -70,6 +70,7 @@ CREATE TABLE historial_academico (
     promedio              NUMERIC CHECK (promedio BETWEEN 0 AND 10),
     tasa_asistencia       NUMERIC CHECK (tasa_asistencia BETWEEN 0 AND 100),
     materias_reprobadas   INTEGER DEFAULT 0 CHECK (materias_reprobadas >= 0),
+    entregas_pendientes   INTEGER DEFAULT 0 CHECK (entregas_pendientes >= 0),
     puntaje_participacion NUMERIC,
     apoyo_economico       BOOLEAN DEFAULT FALSE,
     distancia_km          NUMERIC,
@@ -88,7 +89,7 @@ CREATE TABLE predicciones (
     alumno_id               UUID NOT NULL REFERENCES alumnos(id) ON DELETE CASCADE,
     generado_por            UUID REFERENCES usuarios(id) ON DELETE SET NULL,
     puntaje_riesgo          NUMERIC NOT NULL,
-    nivel_riesgo            TEXT NOT NULL CHECK (nivel_riesgo IN ('bajo', 'medio', 'alto')),
+    nivel_riesgo            TEXT NOT NULL CHECK (nivel_riesgo IN ('bajo', 'medio', 'alto', 'critico')),
     version_modelo          TEXT DEFAULT 'v1.0',
     factores_principales    JSONB,                        -- columna heredada
     factores_contribuyentes JSONB,                        -- top factores del modelo

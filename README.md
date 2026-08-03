@@ -9,8 +9,28 @@ Sistema web que predice el riesgo de abandono escolar de estudiantes mediante un
 | Frontend | React 18, Vite 8, Tailwind CSS, Recharts, React Router v6, Axios, TanStack Query |
 | Backend | Node.js, Express, JWT, Swagger UI |
 | Base de datos | Supabase/PostgreSQL, 7 tablas con PK UUID |
-| ML | FastAPI + Random Forest con scikit-learn; fallback local si el servicio no esta disponible |
+| ML | FastAPI + Random Forest con scikit-learn (4 variables: asistencia, promedio, materias reprobadas y entregas pendientes); fallback local si el servicio no esta disponible |
 | Despliegue | Docker Compose + Nginx |
+
+## Modelo Predictivo
+
+El modelo estima un `puntaje_riesgo` continuo (0–1) a partir de cuatro variables academicas:
+
+- **Tasa de asistencia**
+- **Promedio general**
+- **Materias reprobadas**
+- **Entregas pendientes**
+
+A partir del score se asigna uno de cuatro niveles de riesgo:
+
+| Nivel | Corte del score |
+|---|---|
+| Critico | `>= 0.85` |
+| Alto | `>= 0.70` |
+| Medio | `>= 0.40` |
+| Bajo | resto |
+
+Los niveles **alto** y **critico** disparan alerta y notificacion al tutor.
 
 ## Estructura
 

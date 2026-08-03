@@ -24,7 +24,7 @@ export async function getSummary(req, res, next) {
           .limit(500),
       ]);
 
-    const distribution = { bajo: 0, medio: 0, alto: 0 };
+    const distribution = { bajo: 0, medio: 0, alto: 0, critico: 0 };
     for (const p of predictions ?? []) distribution[p.nivel_riesgo]++;
 
     res.json({

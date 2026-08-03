@@ -19,10 +19,9 @@ Documentación interactiva: http://localhost:8000/docs
 
 `POST /predict`
 ```json
-{ "gpa": 6.5, "attendance_rate": 72, "failed_subjects": 3,
-  "credits_earned": 20, "credits_total": 30, "socioeconomic_level": "medio_bajo" }
+{ "gpa": 6.5, "attendance_rate": 72, "failed_subjects": 3, "pending_deliverables": 4 }
 ```
-Respuesta:
+Respuesta (`risk_level` ∈ `bajo | medio | alto | critico`):
 ```json
 { "risk_score": 0.81, "risk_level": "alto",
   "model_version": "rf-v1 (scikit-learn RandomForest)",
@@ -34,7 +33,7 @@ Respuesta:
 `app/train.py` usa un dataset sintético mientras no existan históricos.
 Para entrenar con datos reales, sustituir `generate_synthetic_dataset()`
 por la carga del CSV o consulta a Supabase, conservando las columnas:
-`gpa, attendance_rate, failed_subjects, credit_ratio, socio_level, dropout`.
+`attendance_rate, gpa, failed_subjects, pending_deliverables, dropout`.
 
 ## ⚠️ Limitaciones del modelo actual
 

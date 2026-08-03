@@ -7,7 +7,6 @@ y devuelve risk_score, risk_level, model_version y contributing_features.
 Si app/model.joblib no existe, ejecutar antes:  python -m app.train
 """
 from pathlib import Path
-from typing import Optional
 
 import joblib
 import numpy as np
@@ -16,13 +15,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 MODEL_PATH = Path(__file__).parent / "model.joblib"
-SOCIO_MAP = {"bajo": 0, "medio_bajo": 1, "medio": 2, "medio_alto": 3, "alto": 4}
 FEATURE_LABELS = {
     "gpa": "Promedio general",
     "attendance_rate": "Tasa de asistencia",
     "failed_subjects": "Materias reprobadas",
-    "credit_ratio": "Avance de créditos",
-    "socio_level": "Nivel socioeconómico",
+    "pending_deliverables": "Entregas pendientes",
 }
 
 app = FastAPI(
@@ -50,9 +47,7 @@ class PredictionInput(BaseModel):
     gpa: float = Field(8.0, ge=0, le=10)
     attendance_rate: float = Field(90.0, ge=0, le=100)
     failed_subjects: int = Field(0, ge=0)
-    credits_earned: int = Field(0, ge=0)
-    credits_total: int = Field(0, ge=0)
-    socioeconomic_level: Optional[str] = "medio"
+    pending_deliverables: int = Field(0, ge=0)
 
     class Config:
         extra = "ignore"  # tolera columnas adicionales del registro académico
@@ -72,6 +67,8 @@ class PredictionOutput(BaseModel):
 
 
 def risk_level(score: float) -> str:
+    if score >= 0.85:
+        return "critico"
     if score >= 0.7:
         return "alto"
     if score >= 0.4:
@@ -115,16 +112,11 @@ def predict(payload: PredictionInput):
     bundle = get_bundle()
     model, features = bundle["model"], bundle["features"]
 
-    credit_ratio = (
-        payload.credits_earned / payload.credits_total
-        if payload.credits_total > 0 else 1.0
-    )
     row = pd.DataFrame([{
         "gpa": payload.gpa,
         "attendance_rate": payload.attendance_rate,
         "failed_subjects": payload.failed_subjects,
-        "credit_ratio": credit_ratio,
-        "socio_level": SOCIO_MAP.get(payload.socioeconomic_level or "medio", 2),
+        "pending_deliverables": payload.pending_deliverables,
     }])[features]
 
     score = float(model.predict_proba(row)[0, 1])

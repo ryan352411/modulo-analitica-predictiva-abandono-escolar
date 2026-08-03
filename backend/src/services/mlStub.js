@@ -9,30 +9,25 @@ const FEATURE_LABELS = {
   promedio_general:     'Promedio general bajo',
   tasa_asistencia:      'Asistencia irregular',
   materias_reprobadas:  'Materias reprobadas',
-  avance_creditos:      'Avance de créditos lento',
-  nivel_socioeconomico: 'Nivel socioeconómico',
+  entregas_pendientes:  'Entregas pendientes',
 };
 
 function riskLevel(score) {
+  if (score >= 0.85) return 'critico';
   if (score >= 0.7) return 'alto';
   if (score >= 0.4) return 'medio';
   return 'bajo';
 }
 
 /**
- * @param {object} input — { promedio, tasa_asistencia, materias_reprobadas, creditos_obtenidos, creditos_totales, nivel_socioeconomico }
+ * @param {object} input — { promedio, tasa_asistencia, materias_reprobadas, entregas_pendientes }
  * @returns {{ puntaje_riesgo:number, nivel_riesgo:string, version_modelo:string, factores_contribuyentes:Array }}
  */
 export function predictDropoutRisk(input = {}) {
   const gpa = Number(input.promedio ?? 8);
   const attendance = Number(input.tasa_asistencia ?? 90);
   const failed = Number(input.materias_reprobadas ?? 0);
-  const creditRatio =
-    input.creditos_totales > 0 ? input.creditos_obtenidos / input.creditos_totales : 1;
-  const socioPenalty =
-    { bajo: 0.10, medio_bajo: 0.06, medio: 0.03, medio_alto: 0.01, alto: 0 }[
-      input.nivel_socioeconomico
-    ] ?? 0.03;
+  const pendingDeliverables = Number(input.entregas_pendientes ?? 0);
 
   // Heurística simple que imita la salida de un Random Forest.
   // Cada variable aporta una contribución concreta al score.
@@ -40,8 +35,7 @@ export function predictDropoutRisk(input = {}) {
     promedio_general:     (10 - gpa) * 0.05,            // hasta 0.5 por promedio
     tasa_asistencia:      ((100 - attendance) / 100) * 0.3, // hasta 0.3 por asistencia
     materias_reprobadas:  Math.min(failed, 5) * 0.05,   // hasta 0.25 por reprobadas
-    avance_creditos:      (1 - creditRatio) * 0.1,      // hasta 0.1 por créditos
-    nivel_socioeconomico: socioPenalty,
+    entregas_pendientes:  Math.min(pendingDeliverables, 6) * 0.05, // hasta 0.3 por entregas
   };
 
   let score = Object.values(contributions).reduce((a, b) => a + b, 0);

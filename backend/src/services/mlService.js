@@ -17,9 +17,7 @@ export async function predictDropoutRisk(input) {
     gpa: Number(input.promedio ?? 8),
     attendance_rate: Number(input.tasa_asistencia ?? 90),
     failed_subjects: Number(input.materias_reprobadas ?? 0),
-    credits_earned: Number(input.creditos_obtenidos ?? 0),
-    credits_total: Number(input.creditos_totales ?? 0),
-    socioeconomic_level: input.nivel_socioeconomico ?? 'medio',
+    pending_deliverables: Number(input.entregas_pendientes ?? 0),
   };
 
   let res;

@@ -4,6 +4,9 @@ import { notifyHighRisk } from '../services/notifications.js';
 import { audit } from '../middleware/auditLog.js';
 import { requireInstitution } from '../utils/request.js';
 
+// Niveles que disparan alerta + notificación y se contabilizan como riesgo elevado.
+const HIGH_RISK_LEVELS = ['alto', 'critico'];
+
 async function getScopedStudent(studentId, institutionId) {
   const { data, error } = await supabase
     .from('alumnos')
@@ -37,10 +40,7 @@ async function runPrediction(student) {
   if (!records?.length) return { prediction: null, reason: 'sin_registro_academico' };
 
   const latest = records[0];
-  const result = await predictDropoutRisk({
-    ...latest,
-    nivel_socioeconomico: student.nivel_socioeconomico,
-  });
+  const result = await predictDropoutRisk({ ...latest });
 
   const { data: prediction, error: pErr } = await supabase
     .from('predicciones')
@@ -49,7 +49,7 @@ async function runPrediction(student) {
     .single();
   if (pErr) throw pErr;
 
-  if (result.nivel_riesgo === 'alto') {
+  if (HIGH_RISK_LEVELS.includes(result.nivel_riesgo)) {
     await supabase.from('alertas').insert({
       alumno_id: student.id,
       prediccion_id: prediction.id,
@@ -105,7 +105,7 @@ export async function generateBatch(req, res, next) {
       if (!prediction) summary.skipped++;
       else {
         summary.generated++;
-        if (prediction.nivel_riesgo === 'alto') summary.high_risk++;
+        if (HIGH_RISK_LEVELS.includes(prediction.nivel_riesgo)) summary.high_risk++;
       }
     }
 
@@ -127,7 +127,7 @@ export async function listHighRisk(req, res, next) {
       .from('predicciones')
       .select('*, alumnos!inner(id, nombre_completo, matricula, semestre_actual, programa, institucion_id)')
       .eq('alumnos.institucion_id', institutionId)
-      .eq('nivel_riesgo', 'alto')
+      .in('nivel_riesgo', HIGH_RISK_LEVELS)
       .order('predicho_en', { ascending: false });
     if (error) throw error;
 
