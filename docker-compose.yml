@@ -27,6 +27,7 @@ services:
       JWT_EXPIRES_IN: 8h
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       ML_SERVICE_URL: http://ml-service:8000
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     depends_on:
       - ml-service
 

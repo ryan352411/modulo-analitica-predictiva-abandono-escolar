@@ -1,13 +1,21 @@
 import { useState } from 'react';
 import Modal from './ui/Modal.jsx';
-import { Field, Input, Textarea } from './ui/Field.jsx';
+import { Field, Input, Select, Textarea } from './ui/Field.jsx';
 import { useCreateRecord } from '../hooks/useStudentMutations.js';
 
+// Todos los registros nuevos corresponden al año en curso (2026).
+const PERIODOS_2026 = ['2026-1', '2026-2', '2026-3'];
+
+// Fecha de hoy (AAAA-MM-DD) para prellenar la fecha de carga.
+const HOY = new Date().toISOString().slice(0, 10);
+
 const EMPTY = {
-  periodo: '',
+  periodo: '2026-1',
+  fecha_carga: HOY,
   promedio: '',
   tasa_asistencia: '',
   materias_reprobadas: 0,
+  entregas_pendientes: 0,
   creditos_obtenidos: 0,
   creditos_totales: 0,
   observaciones: '',
@@ -28,9 +36,11 @@ export default function RecordFormModal({ studentId, open, onClose }) {
     try {
       await createRecord.mutateAsync({
         periodo: form.periodo,
+        registrado_en: form.fecha_carga,
         promedio: Number(form.promedio),
         tasa_asistencia: Number(form.tasa_asistencia),
         materias_reprobadas: Number(form.materias_reprobadas),
+        entregas_pendientes: Number(form.entregas_pendientes),
         creditos_obtenidos: Number(form.creditos_obtenidos),
         creditos_totales: Number(form.creditos_totales),
         observaciones: form.observaciones || null,
@@ -45,8 +55,15 @@ export default function RecordFormModal({ studentId, open, onClose }) {
   return (
     <Modal open={open} onClose={onClose} title="Nuevo registro académico">
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Periodo" hint="Formato AAAA-N, p. ej. 2025-2">
-          <Input required pattern="\d{4}-\d" value={form.periodo} onChange={set('periodo')} placeholder="2025-2" />
+        <Field label="Periodo" hint="Ciclo 2026">
+          <Select required value={form.periodo} onChange={set('periodo')}>
+            {PERIODOS_2026.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Fecha de carga" hint="Fecha en que se cargan los registros">
+          <Input type="date" required value={form.fecha_carga} onChange={set('fecha_carga')} />
         </Field>
         <Field label="Promedio (0–10)">
           <Input type="number" step="0.01" min={0} max={10} required value={form.promedio} onChange={set('promedio')} />
@@ -55,17 +72,20 @@ export default function RecordFormModal({ studentId, open, onClose }) {
           <Input type="number" step="0.1" min={0} max={100} required value={form.tasa_asistencia} onChange={set('tasa_asistencia')} />
         </Field>
         <Field label="Materias reprobadas">
-          <Input type="number" min={0} required value={form.materias_reprobadas} onChange={set('materias_reprobadas')} />
+          <Input type="number" min={0} max={50} required value={form.materias_reprobadas} onChange={set('materias_reprobadas')} />
+        </Field>
+        <Field label="Entregas pendientes">
+          <Input type="number" min={0} max={100} required value={form.entregas_pendientes} onChange={set('entregas_pendientes')} />
         </Field>
         <Field label="Créditos obtenidos">
-          <Input type="number" min={0} required value={form.creditos_obtenidos} onChange={set('creditos_obtenidos')} />
+          <Input type="number" min={0} max={500} required value={form.creditos_obtenidos} onChange={set('creditos_obtenidos')} />
         </Field>
         <Field label="Créditos del periodo">
-          <Input type="number" min={0} required value={form.creditos_totales} onChange={set('creditos_totales')} />
+          <Input type="number" min={0} max={500} required value={form.creditos_totales} onChange={set('creditos_totales')} />
         </Field>
         <div className="sm:col-span-2">
           <Field label="Observaciones">
-            <Textarea value={form.observaciones} onChange={set('observaciones')} />
+            <Textarea maxLength={500} value={form.observaciones} onChange={set('observaciones')} />
           </Field>
         </div>
 

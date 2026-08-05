@@ -1,13 +1,15 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Bell, LogOut, GraduationCap, ShieldCheck, AlertTriangle, Cpu, ScrollText } from 'lucide-react';
+import { NavLink, Outlet, Navigate } from 'react-router-dom';
+import { LayoutDashboard, Users, Bell, LogOut, GraduationCap, ShieldCheck, AlertTriangle, Cpu, ScrollText, School, BookOpen } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { cn } from '../../lib/utils.js';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/estudiantes', label: 'Estudiantes', icon: Users },
+  { to: '/carreras', label: 'Carreras', icon: BookOpen, roles: ['admin', 'coordinador'] },
   { to: '/riesgo-alto', label: 'Riesgo alto', icon: AlertTriangle },
   { to: '/alertas', label: 'Alertas', icon: Bell },
+  { to: '/escuelas', label: 'Escuelas', icon: School, adminOnly: true },
   { to: '/usuarios', label: 'Usuarios', icon: ShieldCheck, adminOnly: true },
   { to: '/modelo', label: 'Modelo IA', icon: Cpu, adminOnly: true },
   { to: '/auditoria', label: 'Auditoría', icon: ScrollText, adminOnly: true },
@@ -16,9 +18,12 @@ const navItems = [
 export default function AppLayout() {
   const { user, logout } = useAuth();
 
+  // Admin sin escuela (recién creado con Google): debe crear la suya primero.
+  if (user && !user.institution_id) return <Navigate to="/onboarding" replace />;
+
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-64 shrink-0 bg-ink text-white flex flex-col">
+    <div className="flex h-screen overflow-hidden">
+      <aside className="w-64 shrink-0 bg-ink text-white flex flex-col h-screen sticky top-0">
         <div className="flex items-center gap-2 px-5 py-5 border-b border-white/10">
           <GraduationCap className="h-6 w-6 text-primary-light" />
           <div className="leading-tight">
@@ -27,9 +32,12 @@ export default function AppLayout() {
           </div>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           {navItems
-            .filter((item) => !item.adminOnly || user?.role === 'admin')
+            .filter((item) => {
+              if (item.roles) return item.roles.includes(user?.role);
+              return !item.adminOnly || user?.role === 'admin';
+            })
             .map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}

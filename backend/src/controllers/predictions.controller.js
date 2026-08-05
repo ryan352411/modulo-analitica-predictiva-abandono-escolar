@@ -50,13 +50,18 @@ async function runPrediction(student) {
   if (pErr) throw pErr;
 
   if (HIGH_RISK_LEVELS.includes(result.nivel_riesgo)) {
-    await supabase.from('alertas').insert({
+    // `estatus` se envía explícito: el default de la columna en la BD es 'open',
+    // que viola el CHECK de estatus y hacía fallar el insert en silencio.
+    const { error: aErr } = await supabase.from('alertas').insert({
       alumno_id: student.id,
       prediccion_id: prediction.id,
+      tipo_alerta: 'academic',
       severidad: result.puntaje_riesgo >= 0.85 ? 'critica' : 'alta',
+      estatus: 'pendiente',
       titulo: `Riesgo alto de abandono: ${student.nombre_completo}`,
       mensaje: `El modelo estimo un riesgo de ${(result.puntaje_riesgo * 100).toFixed(1)}%. Se recomienda intervencion del tutor.`,
     });
+    if (aErr) throw aErr;
     await notifyHighRisk(supabase, { student, prediction });
   }
 
@@ -131,7 +136,10 @@ export async function listHighRisk(req, res, next) {
       .order('predicho_en', { ascending: false });
     if (error) throw error;
 
-    // Conserva solo la predicción más reciente por estudiante.
+    // Conserva solo la predicción más reciente por estudiante. Como `data`
+    // viene ordenada por predicho_en desc, el primer registro de cada alumno es
+    // su predicción más reciente y el arreglo resultante queda ordenado por
+    // fecha de última predicción (más reciente primero).
     const seen = new Set();
     const latestPerStudent = [];
     for (const p of data ?? []) {
@@ -139,7 +147,6 @@ export async function listHighRisk(req, res, next) {
       seen.add(p.alumno_id);
       latestPerStudent.push(p);
     }
-    latestPerStudent.sort((a, b) => Number(b.puntaje_riesgo) - Number(a.puntaje_riesgo));
 
     res.json({ data: latestPerStudent });
   } catch (e) {

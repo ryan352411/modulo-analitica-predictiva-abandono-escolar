@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardBody } from '../components/ui/Card.jsx';
 import { Field, Input, Select } from '../components/ui/Field.jsx';
-import { useStudent } from '../hooks/useStudents.js';
+import { useStudent, usePrograms } from '../hooks/useStudents.js';
 import { useCreateStudent, useUpdateStudent } from '../hooks/useStudentMutations.js';
 
 const EMPTY = {
@@ -25,6 +25,7 @@ export default function StudentForm() {
   const navigate = useNavigate();
 
   const { data: student } = useStudent(isEdit ? id : null);
+  const { data: programs = [] } = usePrograms();
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent(id);
   const mutation = isEdit ? updateStudent : createStudent;
@@ -79,17 +80,25 @@ export default function StudentForm() {
       <Card>
         <CardBody>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Matrícula">
-              <Input required value={form.matricula} onChange={set('matricula')} placeholder="UTD2025001" />
+            <Field
+              label="Matrícula"
+              hint={isEdit ? 'La matrícula no se puede modificar' : 'Se asignará automáticamente al guardar'}
+            >
+              <Input
+                value={form.matricula}
+                readOnly
+                disabled
+                placeholder="Se asignará automáticamente"
+              />
             </Field>
             <Field label="Nombre completo">
-              <Input required value={form.nombre_completo} onChange={set('nombre_completo')} />
+              <Input required maxLength={120} value={form.nombre_completo} onChange={set('nombre_completo')} />
             </Field>
             <Field label="Correo">
-              <Input type="email" value={form.correo} onChange={set('correo')} />
+              <Input type="email" maxLength={120} value={form.correo} onChange={set('correo')} />
             </Field>
             <Field label="Fecha de nacimiento">
-              <Input type="date" value={form.fecha_nacimiento || ''} onChange={set('fecha_nacimiento')} />
+              <Input type="date" required value={form.fecha_nacimiento || ''} onChange={set('fecha_nacimiento')} />
             </Field>
             <Field label="Género">
               <Select value={form.genero || ''} onChange={set('genero')}>
@@ -109,13 +118,18 @@ export default function StudentForm() {
               </Select>
             </Field>
             <Field label="Programa educativo">
-              <Input value={form.programa} onChange={set('programa')} placeholder="TSU en Tecnologías de la Información" />
+              <Select required value={form.programa} onChange={set('programa')}>
+                <option value="">Selecciona una carrera</option>
+                {programs.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </Select>
             </Field>
             <Field label="Semestre actual">
               <Input type="number" min={1} max={12} required value={form.semestre_actual} onChange={set('semestre_actual')} />
             </Field>
             <Field label="Fecha de inscripción">
-              <Input type="date" value={form.fecha_inscripcion || ''} onChange={set('fecha_inscripcion')} />
+              <Input type="date" required value={form.fecha_inscripcion || ''} onChange={set('fecha_inscripcion')} />
             </Field>
             <Field label="Estatus">
               <Select value={form.estatus} onChange={set('estatus')}>

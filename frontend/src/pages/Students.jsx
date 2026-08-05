@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Plus, Upload, Download, Sparkles } from 'lucide-react';
 import { Card, CardBody } from '../components/ui/Card.jsx';
+import Modal from '../components/ui/Modal.jsx';
 import { useStudents, useBatchPredictions, useImportStudents } from '../hooks/useStudents.js';
 import { downloadReport } from '../lib/download.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -12,6 +13,7 @@ export default function Students() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [notice, setNotice] = useState('');
+  const [batchResult, setBatchResult] = useState(null);
   const fileRef = useRef(null);
   const { data, isLoading } = useStudents({ search, page, limit: 20 });
   const batch = useBatchPredictions();
@@ -43,8 +45,7 @@ export default function Students() {
   function onBatch() {
     setNotice('');
     batch.mutate(undefined, {
-      onSuccess: (s) =>
-        setNotice(`Lote generado: ${s.generated} predicciones (${s.high_risk} de riesgo alto), ${s.skipped} omitidos.`),
+      onSuccess: (s) => setBatchResult(s),
       onError: (err) => setNotice(err.response?.data?.error || 'Error al generar el lote.'),
     });
   }
@@ -105,6 +106,53 @@ export default function Students() {
       {notice && (
         <div className="rounded-md bg-primary-light/60 px-4 py-2 text-sm text-ink/80">{notice}</div>
       )}
+
+      <Modal
+        open={Boolean(batchResult)}
+        onClose={() => setBatchResult(null)}
+        title="Resultado de la predicción por lote"
+      >
+        {batchResult && (
+          <div className="space-y-5">
+            <p className="text-sm text-ink/70">
+              Se procesaron los estudiantes activos de la institución. Este es el resumen:
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-ink/10 p-4">
+                <p className="text-2xl font-semibold tabular-nums">{batchResult.total}</p>
+                <p className="text-xs text-ink/60">Estudiantes evaluados</p>
+              </div>
+              <div className="rounded-lg border border-ink/10 p-4">
+                <p className="text-2xl font-semibold tabular-nums text-primary">{batchResult.generated}</p>
+                <p className="text-xs text-ink/60">Predicciones generadas</p>
+              </div>
+              <div className="rounded-lg border border-risk-high/30 bg-risk-high/5 p-4">
+                <p className="text-2xl font-semibold tabular-nums text-risk-high">{batchResult.high_risk}</p>
+                <p className="text-xs text-ink/60">En riesgo alto o crítico</p>
+              </div>
+              <div className="rounded-lg border border-ink/10 p-4">
+                <p className="text-2xl font-semibold tabular-nums text-ink/50">{batchResult.skipped}</p>
+                <p className="text-xs text-ink/60">Omitidos (sin registro académico)</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Link
+                to="/riesgo-alto"
+                onClick={() => setBatchResult(null)}
+                className="rounded-md border border-primary px-4 py-2 text-sm text-primary hover:bg-primary-light"
+              >
+                Ver riesgo alto
+              </Link>
+              <button
+                onClick={() => setBatchResult(null)}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <Card>
         <CardBody className="p-0">

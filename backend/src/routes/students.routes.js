@@ -3,7 +3,7 @@ import express from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import {
   listStudents, getStudent, getStudentTrend, createStudent,
-  updateStudent, deleteStudent, importStudents,
+  updateStudent, deleteStudent, importStudents, listPrograms,
 } from '../controllers/students.controller.js';
 
 const router = Router();
@@ -17,6 +17,7 @@ router.use(requireAuth);
  *     tags: [Students]
  */
 router.get('/', listStudents);
+router.get('/programs', listPrograms);
 router.get('/:id', getStudent);
 router.get('/:id/trend', getStudentTrend);
 router.post('/', requireRole('admin', 'coordinador'), createStudent);

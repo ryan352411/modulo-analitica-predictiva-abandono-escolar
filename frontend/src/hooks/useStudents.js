@@ -47,6 +47,14 @@ export function useImportStudents() {
   });
 }
 
+// Lista de carreras registradas (para el selector del formulario de alumno).
+export function usePrograms() {
+  return useQuery({
+    queryKey: ['programs'],
+    queryFn: async () => (await api.get('/careers')).data.data.map((c) => c.nombre),
+  });
+}
+
 export function useHighRisk() {
   return useQuery({
     queryKey: ['high-risk'],

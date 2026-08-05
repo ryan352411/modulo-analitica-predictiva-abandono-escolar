@@ -12,6 +12,7 @@ const RECORD_FIELDS = [
   'creditos_obtenidos',
   'creditos_totales',
   'observaciones',
+  'registrado_en',
 ];
 
 async function assertStudentInInstitution(studentId, institutionId) {

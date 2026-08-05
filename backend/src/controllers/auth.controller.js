@@ -68,7 +68,7 @@ export async function login(req, res, next) {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ error: 'Correo y contrasena son requeridos' });
+      return res.status(400).json({ error: 'Correo y contraseña son requeridos' });
     }
     if (isLoginBlocked(req, email)) {
       return res.status(429).json({ error: 'Demasiados intentos. Intenta mas tarde' });
@@ -93,6 +93,167 @@ export async function login(req, res, next) {
     req.user = { id: user.id };
     await audit(req, 'LOGIN', 'usuarios', user.id);
     clearFailedLogins(req, email);
+
+    res.json({
+      token,
+      refresh_token,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role,
+        institution_id: user.institution_id,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * Registro de una cuenta nueva con correo y contraseña. Body: { full_name, email, password }.
+ * Crea un usuario admin SIN escuela (hará el onboarding para crear la suya),
+ * igual que el auto-alta de Google. Devuelve tokens y usuario, dejando la sesión iniciada.
+ */
+export async function register(req, res, next) {
+  try {
+    const { full_name, email, password } = req.body || {};
+    const name = String(full_name || '').trim();
+    const correo = String(email || '').trim().toLowerCase();
+
+    if (!name || !correo || !password) {
+      return res.status(400).json({ error: 'Nombre, correo y contraseña son requeridos' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      return res.status(400).json({ error: 'El correo no tiene un formato válido' });
+    }
+    if (String(password).length < 8) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    }
+
+    const userSelect =
+      'id, email:correo, full_name:nombre_completo, role:rol, institution_id:institucion_id';
+
+    // ¿El correo ya está registrado?
+    const { data: existing } = await supabase
+      .from('usuarios')
+      .select('id')
+      .eq('correo', correo)
+      .maybeSingle();
+    if (existing) {
+      return res.status(409).json({ error: 'Ya existe una cuenta con ese correo' });
+    }
+
+    const password_hash = await bcrypt.hash(password, 12);
+    const { data: user, error } = await supabase
+      .from('usuarios')
+      .insert({
+        nombre_completo: name,
+        correo,
+        contrasena_hash: password_hash,
+        rol: 'admin',
+        institucion_id: null,
+      })
+      .select(userSelect)
+      .single();
+    if (error) throw error;
+
+    const token = signAccessToken(user);
+    const refresh_token = signRefreshToken(user);
+    req.user = { id: user.id };
+    await audit(req, 'CREATE', 'usuarios', user.id, { via: 'signup' });
+
+    res.status(201).json({
+      token,
+      refresh_token,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        role: user.role,
+        institution_id: user.institution_id,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/**
+ * Inicia sesión con Google. Body: { credential } (ID token de Google Identity
+ * Services). Valida el token contra Google, y si el correo no existe crea una
+ * cuenta admin SIN escuela (hará el onboarding para crear la suya).
+ */
+export async function googleLogin(req, res, next) {
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      return res.status(503).json({ error: 'El inicio de sesion con Google no esta configurado' });
+    }
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ error: 'Falta el token de Google' });
+    }
+
+    // Valida el ID token contra Google (verifica firma y expiración).
+    let payload;
+    try {
+      const resp = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
+      );
+      if (!resp.ok) throw new Error('token invalido');
+      payload = await resp.json();
+    } catch {
+      return res.status(401).json({ error: 'No se pudo validar la sesion de Google' });
+    }
+
+    const audienceOk = payload.aud === clientId;
+    const issuerOk =
+      payload.iss === 'accounts.google.com' || payload.iss === 'https://accounts.google.com';
+    const emailVerified = payload.email_verified === true || payload.email_verified === 'true';
+    if (!audienceOk || !issuerOk || !payload.email || !emailVerified) {
+      return res.status(401).json({ error: 'Sesion de Google no valida' });
+    }
+
+    const email = String(payload.email).trim().toLowerCase();
+    const fullName = payload.name || email;
+
+    const userSelect =
+      'id, email:correo, full_name:nombre_completo, role:rol, institution_id:institucion_id, is_active:activo';
+
+    let { data: user } = await supabase
+      .from('usuarios')
+      .select(userSelect)
+      .eq('correo', email)
+      .maybeSingle();
+
+    if (user && !user.is_active) {
+      return res.status(401).json({ error: 'Usuario inactivo' });
+    }
+
+    // Correo no registrado -> nueva cuenta admin sin escuela (onboarding).
+    if (!user) {
+      const randomHash = await bcrypt.hash(crypto.randomUUID() + crypto.randomUUID(), 12);
+      const { data: created, error: cErr } = await supabase
+        .from('usuarios')
+        .insert({
+          nombre_completo: fullName,
+          correo: email,
+          contrasena_hash: randomHash,
+          rol: 'admin',
+          institucion_id: null,
+        })
+        .select(userSelect)
+        .single();
+      if (cErr) throw cErr;
+      user = created;
+    }
+
+    const token = signAccessToken(user);
+    const refresh_token = signRefreshToken(user);
+    await supabase.from('usuarios').update({ ultimo_acceso: new Date().toISOString() }).eq('id', user.id);
+    req.user = { id: user.id };
+    await audit(req, 'LOGIN', 'usuarios', user.id, { via: 'google' });
 
     res.json({
       token,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, KeyRound } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { Card, CardBody } from '../components/ui/Card.jsx';
 import Modal from '../components/ui/Modal.jsx';
@@ -16,6 +16,10 @@ export default function Users() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
+  // Cambio de contraseña: usuario objetivo + nueva contraseña + error.
+  const [pwUser, setPwUser] = useState(null);
+  const [pwValue, setPwValue] = useState('');
+  const [pwError, setPwError] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['users'],
@@ -39,6 +43,24 @@ export default function Users() {
 
   function set(key) {
     return (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  }
+
+  function openPassword(u) {
+    setPwUser(u);
+    setPwValue('');
+    setPwError('');
+  }
+
+  function submitPassword(e) {
+    e.preventDefault();
+    setPwError('');
+    update.mutate(
+      { id: pwUser.id, password: pwValue },
+      {
+        onSuccess: () => { setPwUser(null); setPwValue(''); },
+        onError: (err) => setPwError(err.response?.data?.error || 'No fue posible cambiar la contraseña'),
+      }
+    );
   }
 
   return (
@@ -99,15 +121,23 @@ export default function Users() {
                       {u.is_active ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-right">
-                    {u.id !== me?.id && (
+                  <td className="px-5 py-3">
+                    <div className="flex items-center justify-end gap-3">
                       <button
-                        onClick={() => update.mutate({ id: u.id, is_active: !u.is_active })}
-                        className="text-xs text-primary hover:underline"
+                        onClick={() => openPassword(u)}
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                       >
-                        {u.is_active ? 'Desactivar' : 'Reactivar'}
+                        <KeyRound className="h-3.5 w-3.5" /> Cambiar contraseña
                       </button>
-                    )}
+                      {u.id !== me?.id && (
+                        <button
+                          onClick={() => update.mutate({ id: u.id, is_active: !u.is_active })}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          {u.is_active ? 'Desactivar' : 'Reactivar'}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -150,6 +180,41 @@ export default function Users() {
               className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
             >
               {create.isPending ? 'Creando…' : 'Crear usuario'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(pwUser)}
+        onClose={() => setPwUser(null)}
+        title={pwUser ? `Cambiar contraseña de ${pwUser.full_name}` : 'Cambiar contraseña'}
+      >
+        <form onSubmit={submitPassword} className="space-y-4">
+          <Field label="Nueva contraseña" hint="Mínimo 8 caracteres">
+            <Input
+              type="password"
+              required
+              minLength={8}
+              maxLength={72}
+              value={pwValue}
+              onChange={(e) => setPwValue(e.target.value)}
+              autoComplete="new-password"
+            />
+          </Field>
+
+          {pwError && <p className="text-sm text-risk-high">{pwError}</p>}
+
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setPwUser(null)} className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={update.isPending}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
+            >
+              {update.isPending ? 'Guardando…' : 'Cambiar contraseña'}
             </button>
           </div>
         </form>

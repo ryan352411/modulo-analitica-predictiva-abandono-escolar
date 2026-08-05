@@ -32,6 +32,57 @@ function buildStudentPayload(body) {
   return payload;
 }
 
+// Iniciales de la escuela: primera letra de cada palabra significativa del
+// nombre (ignora conectores). "Instituto Tecnológico Central" -> "ITC".
+const INITIAL_STOPWORDS = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'en', 'a', 'para', 'por']);
+
+export function institutionInitials(nombre = '') {
+  const initials = String(nombre)
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w && !INITIAL_STOPWORDS.has(w.toLowerCase()))
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .replace(/[^A-Z]/g, '');
+  return initials || 'ESC';
+}
+
+// Cadena de n dígitos (primer dígito 1-9 para garantizar longitud constante).
+function randomDigits(n) {
+  let s = String(Math.floor(Math.random() * 9) + 1);
+  for (let i = 1; i < n; i++) s += Math.floor(Math.random() * 10);
+  return s;
+}
+
+// Genera una matrícula única con el formato <iniciales><8 dígitos>.
+async function generateUniqueMatricula(prefix) {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const matricula = `${prefix}${randomDigits(8)}`;
+    const { data, error } = await supabase
+      .from('alumnos')
+      .select('id')
+      .eq('matricula', matricula)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return matricula;
+  }
+  const err = new Error('No se pudo generar una matricula unica, intenta de nuevo');
+  err.status = 503;
+  throw err;
+}
+
+// Obtiene el prefijo de iniciales de la institución a partir de su nombre.
+async function institutionPrefix(institutionId) {
+  const { data, error } = await supabase
+    .from('instituciones')
+    .select('nombre')
+    .eq('id', institutionId)
+    .single();
+  if (error) throw error;
+  return institutionInitials(data?.nombre);
+}
+
 export async function listStudents(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
@@ -79,24 +130,53 @@ export async function getStudent(req, res, next) {
   }
 }
 
+export async function listPrograms(req, res, next) {
+  try {
+    const institutionId = requireInstitution(req);
+    const { data, error } = await supabase
+      .from('alumnos')
+      .select('programa')
+      .eq('institucion_id', institutionId)
+      .not('programa', 'is', null);
+    if (error) throw error;
+
+    const programas = [...new Set((data ?? []).map((r) => r.programa).filter(Boolean))].sort(
+      (a, b) => a.localeCompare(b, 'es')
+    );
+    res.json({ data: programas });
+  } catch (e) {
+    next(e);
+  }
+}
+
 export async function createStudent(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
-    const payload = {
-      ...buildStudentPayload(req.body),
-      institucion_id: institutionId,
-    };
+    const base = buildStudentPayload(req.body);
 
-    // Validación de datos incompletos -> 422 (Unprocessable Entity)
+    // Validación de datos incompletos -> 422 (Unprocessable Entity).
+    // La matrícula ya no la envía el cliente: se genera automáticamente.
     const camposFaltantes = [];
-    if (!payload.nombre_completo) camposFaltantes.push('nombre_completo');
-    if (!payload.matricula) camposFaltantes.push('matricula');
+    if (!base.nombre_completo) camposFaltantes.push('nombre_completo');
+    if (!base.fecha_nacimiento) camposFaltantes.push('fecha_nacimiento');
+    if (!base.fecha_inscripcion) camposFaltantes.push('fecha_inscripcion');
     if (camposFaltantes.length) {
       return res.status(422).json({
         error: 'Datos incompletos para crear el estudiante',
         campos_faltantes: camposFaltantes,
       });
     }
+
+    // Matrícula única asignada por el sistema (ignora la del cliente): iniciales
+    // de la escuela + 8 dígitos, p. ej. ITC48291052.
+    const prefix = await institutionPrefix(institutionId);
+    const matricula = await generateUniqueMatricula(prefix);
+    const payload = {
+      ...base,
+      matricula,
+      codigo_alumno: matricula,
+      institucion_id: institutionId,
+    };
 
     const { data, error } = await supabase.from('alumnos').insert(payload).select().single();
     if (error) throw error;
@@ -112,6 +192,9 @@ export async function updateStudent(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
     const payload = buildStudentPayload(req.body);
+    // La matrícula es inmutable: nunca se actualiza aunque llegue en el cuerpo.
+    delete payload.matricula;
+    delete payload.codigo_alumno;
 
     const { data, error } = await supabase
       .from('alumnos')
