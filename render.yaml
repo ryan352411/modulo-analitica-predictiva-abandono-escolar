@@ -1,0 +1,74 @@
+# Blueprint de Render — Módulo de Analítica Predictiva de Abandono Escolar
+# =========================================================================
+# Despliega 3 servicios: ml-service (FastAPI), backend (Express) y frontend (sitio estático).
+# En Render: New > Blueprint > conecta este repositorio > Apply.
+#
+# Variables:
+#   - value:          valor público, vive en el repo (no secreto).
+#   - sync: false:    se captura en el panel de Render (secretos / URLs finales).
+#   - generateValue:  Render genera un valor seguro (JWT_SECRET).
+#
+# Las URLs https://<nombre>.onrender.com son PREDICHAS. Tras el primer deploy,
+# verifica en el panel la URL real de cada servicio y corrige si difiere.
+
+services:
+  # 1) Microservicio de ML (FastAPI + RandomForest) --------------------------
+  - type: web
+    name: abandono-ml
+    runtime: docker
+    dockerfilePath: ./ml-service/Dockerfile
+    dockerContext: ./ml-service
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+
+  # 2) Backend API (Express) -------------------------------------------------
+  - type: web
+    name: abandono-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: JWT_SECRET
+        generateValue: true
+      # Supabase: la URL y el client id de Google son públicos; la SERVICE KEY es secreta.
+      - key: SUPABASE_URL
+        value: https://tzsnqcyqcdocjydquacr.supabase.co
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        value: 1047043310639-0p77gie825fqps82ugshheis1v7c5l35.apps.googleusercontent.com
+      # URL pública del microservicio ML (para las predicciones reales).
+      - key: ML_SERVICE_URL
+        value: https://abandono-ml.onrender.com
+      # Origen permitido por CORS: debe ser la URL del frontend.
+      - key: FRONTEND_URL
+        value: https://abandono-web.onrender.com
+
+  # 3) Frontend (Vite build servido como sitio estático) ---------------------
+  - type: web
+    name: abandono-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Apunta al backend público (con /api). Estas VITE_* se hornean en el build.
+      - key: VITE_API_URL
+        value: https://abandono-api.onrender.com/api
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_rTIwp81evWmPZTZP6_WPcg_fP-KvLKh
+      - key: VITE_GOOGLE_CLIENT_ID
+        value: 1047043310639-0p77gie825fqps82ugshheis1v7c5l35.apps.googleusercontent.com
+    routes:
+      # SPA: cualquier ruta del cliente (/login, /registro, …) sirve index.html.
+      - type: rewrite
+        source: /*
+        destination: /index.html
