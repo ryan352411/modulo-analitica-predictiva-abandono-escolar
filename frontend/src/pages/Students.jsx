@@ -96,27 +96,31 @@ export default function Students() {
             </>
           )}
 
-          <div className="inline-flex items-center rounded-md border border-ink/20 text-sm overflow-hidden">
-            <span className="px-2 text-ink/40">
-              <Download className="h-4 w-4" />
-            </span>
-            {['csv', 'xlsx', 'pdf'].map((f) => (
-              <button
-                key={f}
-                onClick={() => onExport(f)}
-                className="px-2.5 py-2 hover:bg-ink/5 uppercase text-xs font-medium"
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+          {canManage && (
+            <div className="inline-flex items-center rounded-md border border-ink/20 text-sm overflow-hidden">
+              <span className="px-2 text-ink/40">
+                <Download className="h-4 w-4" />
+              </span>
+              {['csv', 'xlsx', 'pdf'].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => onExport(f)}
+                  className="px-2.5 py-2 hover:bg-ink/5 uppercase text-xs font-medium"
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <Link
-            to="/estudiantes/nuevo"
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
-          >
-            <Plus className="h-4 w-4" /> Nuevo
-          </Link>
+          {canManage && (
+            <Link
+              to="/estudiantes/nuevo"
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+            >
+              <Plus className="h-4 w-4" /> Nuevo
+            </Link>
+          )}
         </div>
       </div>
 

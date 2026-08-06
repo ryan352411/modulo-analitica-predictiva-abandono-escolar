@@ -29,6 +29,7 @@ export default function StudentDetail() {
   const [predictionError, setPredictionError] = useState('');
 
   const isAdmin = user?.role === 'admin';
+  const canManage = user?.role === 'admin' || user?.role === 'coordinador';
 
   function onDelete() {
     const ok = window.confirm(
@@ -70,12 +71,14 @@ export default function StudentDetail() {
         </div>
         <div className="flex items-center gap-3">
           {latest && <RiskBadge level={latest.nivel_riesgo} />}
-          <Link
-            to={`/estudiantes/${id}/editar`}
-            className="inline-flex items-center gap-2 rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5"
-          >
-            <Pencil className="h-4 w-4" /> Editar
-          </Link>
+          {canManage && (
+            <Link
+              to={`/estudiantes/${id}/editar`}
+              className="inline-flex items-center gap-2 rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5"
+            >
+              <Pencil className="h-4 w-4" /> Editar
+            </Link>
+          )}
           <button
             onClick={() => setRecordOpen(true)}
             className="inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 text-sm text-primary hover:bg-primary-light"

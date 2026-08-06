@@ -5,9 +5,12 @@ import { api } from '../lib/api.js';
 import { Card, CardBody } from '../components/ui/Card.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import { Field, Input } from '../components/ui/Field.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Careers() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const canManage = user?.role === 'admin' || user?.role === 'coordinador';
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [nombre, setNombre] = useState('');
@@ -73,12 +76,14 @@ export default function Careers() {
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <BookOpen className="h-6 w-6 text-primary" /> Carreras
         </h1>
-        <button
-          onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
-        >
-          <Plus className="h-4 w-4" /> Nueva carrera
-        </button>
+        {canManage && (
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+          >
+            <Plus className="h-4 w-4" /> Nueva carrera
+          </button>
+        )}
       </div>
 
       <Card>
@@ -103,18 +108,22 @@ export default function Careers() {
                   <td className="px-5 py-3 font-medium">{c.nombre}</td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => openEdit(c)}
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        <Pencil className="h-3.5 w-3.5" /> Editar
-                      </button>
-                      <button
-                        onClick={() => onDelete(c)}
-                        className="inline-flex items-center gap-1 text-xs text-risk-high hover:underline"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> Eliminar
-                      </button>
+                      {canManage && (
+                        <>
+                          <button
+                            onClick={() => openEdit(c)}
+                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            <Pencil className="h-3.5 w-3.5" /> Editar
+                          </button>
+                          <button
+                            onClick={() => onDelete(c)}
+                            className="inline-flex items-center gap-1 text-xs text-risk-high hover:underline"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

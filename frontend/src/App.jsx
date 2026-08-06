@@ -31,11 +31,13 @@ export default function App() {
           <Route path="/estudiantes/:id/editar" element={<StudentForm />} />
           <Route path="/riesgo-alto" element={<HighRisk />} />
           <Route path="/alertas" element={<Alerts />} />
-          <Route path="/usuarios" element={<Users />} />
-          <Route path="/escuelas" element={<Institutions />} />
           <Route path="/carreras" element={<Careers />} />
-          <Route path="/modelo" element={<ModelInfo />} />
-          <Route path="/auditoria" element={<AuditLogs />} />
+          <Route element={<ProtectedRoute roles={['admin']} />}>
+            <Route path="/usuarios" element={<Users />} />
+            <Route path="/escuelas" element={<Institutions />} />
+            <Route path="/modelo" element={<ModelInfo />} />
+            <Route path="/auditoria" element={<AuditLogs />} />
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
