@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Pencil, ClipboardPlus } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Sparkles, Pencil, ClipboardPlus, Trash2 } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -14,13 +14,32 @@ import { Card, CardHeader, CardBody } from '../components/ui/Card.jsx';
 import RiskBadge from '../components/ui/RiskBadge.jsx';
 import RecordFormModal from '../components/RecordFormModal.jsx';
 import { useStudent, useGeneratePrediction } from '../hooks/useStudents.js';
+import { useDeleteStudent } from '../hooks/useStudentMutations.js';
+import { useAuth } from '../context/AuthContext.jsx';
+import { mensajeError } from '../lib/utils.js';
 
 export default function StudentDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: student, isLoading } = useStudent(id);
   const predict = useGeneratePrediction(id);
+  const deleteStudent = useDeleteStudent();
   const [recordOpen, setRecordOpen] = useState(false);
   const [predictionError, setPredictionError] = useState('');
+
+  const isAdmin = user?.role === 'admin';
+
+  function onDelete() {
+    const ok = window.confirm(
+      `¿Eliminar a ${student.nombre_completo}?\n\nEl borrado es físico y en cascada: se eliminarán también su historial académico, sus predicciones y sus alertas. Esta acción no se puede deshacer.`,
+    );
+    if (!ok) return;
+    deleteStudent.mutate(id, {
+      onSuccess: () => navigate('/estudiantes'),
+      onError: (err) => window.alert(mensajeError(err, 'No fue posible eliminar al estudiante')),
+    });
+  }
 
   if (isLoading) return <p className="text-ink/60">Cargando expediente…</p>;
   if (!student) return <p className="text-risk-high">Estudiante no encontrado.</p>;
@@ -80,6 +99,15 @@ export default function StudentDetail() {
             <Sparkles className="h-4 w-4" />
             {predict.isPending ? 'Calculando…' : 'Generar predicción'}
           </button>
+          {isAdmin && (
+            <button
+              onClick={onDelete}
+              disabled={deleteStudent.isPending}
+              className="inline-flex items-center gap-2 rounded-md border border-risk-high px-4 py-2 text-sm text-risk-high hover:bg-risk-high/5 disabled:opacity-60"
+            >
+              <Trash2 className="h-4 w-4" /> {deleteStudent.isPending ? 'Eliminando…' : 'Eliminar'}
+            </button>
+          )}
         </div>
       </div>
       {predictionError && <p className="text-sm text-risk-high">{predictionError}</p>}

@@ -3,8 +3,7 @@ import { Users, Bell, Activity } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../components/ui/Card.jsx';
 import RiskBadge from '../components/ui/RiskBadge.jsx';
 import { useDashboardSummary } from '../hooks/useDashboard.js';
-
-const RISK_COLORS = { bajo: '#2E9E6B', medio: '#E5A33D', alto: '#D14545' };
+import { riskHex } from '../lib/utils.js';
 
 export default function Dashboard() {
   const { data, isLoading, error } = useDashboardSummary();
@@ -46,7 +45,7 @@ export default function Dashboard() {
                   outerRadius={90}
                 >
                   {pieData.map((entry) => (
-                    <Cell key={entry.level} fill={RISK_COLORS[entry.level]} />
+                    <Cell key={entry.level} fill={riskHex[entry.level]} />
                   ))}
                 </Pie>
                 <Tooltip />
