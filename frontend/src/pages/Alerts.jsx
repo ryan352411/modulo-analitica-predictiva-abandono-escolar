@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { Card, CardBody } from '../components/ui/Card.jsx';
-import { cn } from '../lib/utils.js';
+import { cn, ESTATUS_ALERTA, SEVERIDAD_ALERTA } from '../lib/utils.js';
 
 const severityStyle = {
   info: 'bg-primary-light text-primary',
@@ -13,10 +14,17 @@ const severityStyle = {
 
 export default function Alerts() {
   const qc = useQueryClient();
+  const [estatus, setEstatus] = useState('');
+  const [severidad, setSeveridad] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['alerts'],
-    queryFn: async () => (await api.get('/alerts')).data.data,
+    queryKey: ['alerts', { estatus, severidad }],
+    queryFn: async () =>
+      (
+        await api.get('/alerts', {
+          params: { status: estatus || undefined, severity: severidad || undefined },
+        })
+      ).data.data,
   });
 
   const update = useMutation({
@@ -26,7 +34,35 @@ export default function Alerts() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Alertas</h1>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="text-2xl font-semibold">Alertas</h1>
+        <div className="flex items-center gap-2">
+          <select
+            value={estatus}
+            onChange={(e) => setEstatus(e.target.value)}
+            className="rounded-md border border-ink/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">Todos los estatus</option>
+            {ESTATUS_ALERTA.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={severidad}
+            onChange={(e) => setSeveridad(e.target.value)}
+            className="rounded-md border border-ink/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">Todas las severidades</option>
+            {SEVERIDAD_ALERTA.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {isLoading && <p className="text-ink/60">Cargando alertas…</p>}
 
@@ -78,6 +114,14 @@ export default function Alerts() {
                     className="rounded-md bg-risk-low px-3 py-1 text-xs text-white hover:opacity-90"
                   >
                     Marcar resuelta
+                  </button>
+                )}
+                {(a.estatus === 'pendiente' || a.estatus === 'en_atencion') && (
+                  <button
+                    onClick={() => update.mutate({ id: a.id, status: 'descartada' })}
+                    className="rounded-md border border-ink/20 px-3 py-1 text-xs text-ink/60 hover:bg-ink/5"
+                  >
+                    Descartar
                   </button>
                 )}
               </div>

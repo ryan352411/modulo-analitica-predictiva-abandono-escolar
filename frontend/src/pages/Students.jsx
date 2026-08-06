@@ -6,16 +6,23 @@ import Modal from '../components/ui/Modal.jsx';
 import { useStudents, useBatchPredictions, useImportStudents } from '../hooks/useStudents.js';
 import { downloadReport } from '../lib/download.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { ESTATUS_ALUMNO } from '../lib/utils.js';
 
 export default function Students() {
   const { user } = useAuth();
   const canManage = user?.role === 'admin' || user?.role === 'coordinador';
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [notice, setNotice] = useState('');
   const [batchResult, setBatchResult] = useState(null);
   const fileRef = useRef(null);
-  const { data, isLoading } = useStudents({ search, page, limit: 20 });
+  const { data, isLoading, error } = useStudents({
+    search,
+    status: status || undefined,
+    page,
+    limit: 20,
+  });
   const batch = useBatchPredictions();
   const importer = useImportStudents();
 
@@ -69,6 +76,22 @@ export default function Students() {
               className="w-64 rounded-md border border-ink/20 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
+
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-md border border-ink/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="">Todos los estatus</option>
+            {ESTATUS_ALUMNO.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
 
           {canManage && (
             <>
