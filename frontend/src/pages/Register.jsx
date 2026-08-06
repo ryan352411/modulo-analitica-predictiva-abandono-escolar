@@ -29,7 +29,6 @@ export default function Register() {
     setLoading(true);
     try {
       const user = await register(form.full_name, form.email, form.password);
-      // Recién registrado no tiene escuela todavía -> onboarding.
       navigate(user && !user.institution_id ? '/onboarding' : '/');
     } catch (err) {
       setError(err.response?.data?.error || 'No fue posible crear la cuenta');
@@ -40,7 +39,6 @@ export default function Register() {
 
   return (
     <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
-      {/* Panel temático (igual que el login) */}
       <div className="relative hidden overflow-hidden bg-gradient-to-br from-primary via-primary-dark to-ink p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 -right-16 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
@@ -60,8 +58,8 @@ export default function Register() {
             Crea tu cuenta y empieza a cuidar a tus estudiantes
           </h2>
           <p className="mb-6 max-w-md text-sm text-white/75">
-            Regístrate para administrar tu escuela, dar seguimiento a los alumnos y recibir
-            alertas tempranas.
+            Regístrate para administrar tu escuela, dar seguimiento a los alumnos y recibir alertas
+            tempranas.
           </p>
 
           <div className="mx-auto max-w-md rounded-2xl bg-white p-6 shadow-2xl">
@@ -82,7 +80,6 @@ export default function Register() {
         </div>
       </div>
 
-      {/* Columna del formulario */}
       <div className="flex min-h-screen items-center justify-center bg-paper p-6 sm:p-10">
         <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow-lg">
           <div className="mb-6 flex flex-col items-center gap-2">

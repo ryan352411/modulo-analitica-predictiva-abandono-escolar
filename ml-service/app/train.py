@@ -11,22 +11,22 @@ Uso:
     python -m app.train
 Genera: app/model.joblib y reporta AUC-ROC en consola.
 """
+
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
-import joblib
-from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, recall_score
 
 RNG = np.random.default_rng(42)
 FEATURES = ["attendance_rate", "gpa", "failed_subjects", "pending_deliverables"]
 MODEL_VERSION = "rf-v1 (scikit-learn RandomForest)"
 MODEL_PATH = Path(__file__).parent / "model.joblib"
-# metrics.json queda un nivel arriba de app/ (raíz de ml-service) para consulta rápida.
 METRICS_PATH = Path(__file__).parent.parent / "metrics.json"
 
 
@@ -34,29 +34,28 @@ def generate_synthetic_dataset(n: int = 6000) -> pd.DataFrame:
     gpa = np.clip(RNG.normal(8.0, 1.3, n), 0, 10)
     attendance = np.clip(RNG.normal(88, 12, n), 0, 100)
     failed = RNG.poisson(0.7, n)
-    # Entregas no realizadas: la mayoría al corriente, cola de acumulación.
     pending_deliverables = np.clip(RNG.poisson(1.5, n), 0, 12)
 
-    # Probabilidad latente de abandono con relaciones plausibles:
-    # más entregas pendientes elevan el riesgo de abandono.
     logit = (
         -2.2
         + (8.0 - gpa) * 0.55
         + (90 - attendance) * 0.045
         + failed * 0.5
         + pending_deliverables * 0.35
-        + RNG.normal(0, 0.6, n)  # ruido
+        + RNG.normal(0, 0.6, n)
     )
     prob = 1 / (1 + np.exp(-logit))
     dropout = RNG.binomial(1, prob)
 
-    return pd.DataFrame({
-        "gpa": gpa,
-        "attendance_rate": attendance,
-        "failed_subjects": failed,
-        "pending_deliverables": pending_deliverables,
-        "dropout": dropout,
-    })
+    return pd.DataFrame(
+        {
+            "gpa": gpa,
+            "attendance_rate": attendance,
+            "failed_subjects": failed,
+            "pending_deliverables": pending_deliverables,
+            "dropout": dropout,
+        }
+    )
 
 
 def main() -> dict:
@@ -67,8 +66,12 @@ def main() -> dict:
     )
 
     model = RandomForestClassifier(
-        n_estimators=300, max_depth=12, min_samples_leaf=5,
-        class_weight="balanced", random_state=42, n_jobs=-1,
+        n_estimators=300,
+        max_depth=12,
+        min_samples_leaf=5,
+        class_weight="balanced",
+        random_state=42,
+        n_jobs=-1,
     )
     model.fit(X_train, y_train)
 
@@ -92,7 +95,6 @@ def main() -> dict:
     )
     print(f"Modelo guardado en {MODEL_PATH}")
 
-    # Registro legible de métricas para la API y para la documentación de la tesina.
     metrics_report = {
         "model_version": MODEL_VERSION,
         "features": FEATURES,
@@ -105,7 +107,9 @@ def main() -> dict:
         "n_test": metrics["n_test"],
         "trained_at": trained_at,
     }
-    METRICS_PATH.write_text(json.dumps(metrics_report, indent=2, ensure_ascii=False), encoding="utf-8")
+    METRICS_PATH.write_text(
+        json.dumps(metrics_report, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     print(f"Métricas guardadas en {METRICS_PATH}")
 
     return {"metrics": metrics, "trained_at": trained_at}

@@ -4,7 +4,6 @@ import { notifyHighRisk } from '../services/notifications.js';
 import { audit } from '../middleware/auditLog.js';
 import { requireInstitution } from '../utils/request.js';
 
-// Niveles que disparan alerta + notificación y se contabilizan como riesgo elevado.
 const HIGH_RISK_LEVELS = ['alto', 'critico'];
 
 async function getScopedStudent(studentId, institutionId) {
@@ -23,11 +22,6 @@ async function getScopedStudent(studentId, institutionId) {
   return data;
 }
 
-/**
- * Genera y persiste una predicción para un estudiante a partir de su último
- * registro académico. Crea alerta + notificación si el riesgo es alto.
- * @returns {{ prediction:object|null, reason?:string }}
- */
 async function runPrediction(student) {
   const { data: records, error: rErr } = await supabase
     .from('historial_academico')
@@ -50,8 +44,6 @@ async function runPrediction(student) {
   if (pErr) throw pErr;
 
   if (HIGH_RISK_LEVELS.includes(result.nivel_riesgo)) {
-    // `estatus` se envía explícito: el default de la columna en la BD es 'open',
-    // que viola el CHECK de estatus y hacía fallar el insert en silencio.
     const { error: aErr } = await supabase.from('alertas').insert({
       alumno_id: student.id,
       prediccion_id: prediction.id,
@@ -90,10 +82,6 @@ export async function generatePrediction(req, res, next) {
   }
 }
 
-/**
- * Genera predicciones para todos los estudiantes activos de la institución
- * que tengan al menos un registro académico. Solo admin/coordinador.
- */
 export async function generateBatch(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
@@ -121,25 +109,19 @@ export async function generateBatch(req, res, next) {
   }
 }
 
-/**
- * Lista los estudiantes de la institución cuya predicción más reciente es de
- * riesgo alto, ordenados por score descendente.
- */
 export async function listHighRisk(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
     const { data, error } = await supabase
       .from('predicciones')
-      .select('*, alumnos!inner(id, nombre_completo, matricula, semestre_actual, programa, institucion_id)')
+      .select(
+        '*, alumnos!inner(id, nombre_completo, matricula, semestre_actual, programa, institucion_id)',
+      )
       .eq('alumnos.institucion_id', institutionId)
       .in('nivel_riesgo', HIGH_RISK_LEVELS)
       .order('predicho_en', { ascending: false });
     if (error) throw error;
 
-    // Conserva solo la predicción más reciente por estudiante. Como `data`
-    // viene ordenada por predicho_en desc, el primer registro de cada alumno es
-    // su predicción más reciente y el arreglo resultante queda ordenado por
-    // fecha de última predicción (más reciente primero).
     const seen = new Set();
     const latestPerStudent = [];
     for (const p of data ?? []) {

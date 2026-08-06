@@ -1,6 +1,5 @@
 import { supabase } from '../config/supabase.js';
 
-/** Registra una acción en registros_auditoria. Uso: await audit(req, 'CREATE', 'alumnos', id, {...}) */
 export async function audit(req, action, entity, entityId = null, detail = null) {
   try {
     await supabase.from('registros_auditoria').insert({

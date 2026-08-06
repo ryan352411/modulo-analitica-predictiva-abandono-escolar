@@ -1,6 +1,5 @@
 import { api } from './api.js';
 
-/** Descarga un reporte exportado (csv | xlsx | pdf) respetando el JWT. */
 export async function downloadReport(type, format) {
   const res = await api.get('/reports/export', {
     params: { type, format },

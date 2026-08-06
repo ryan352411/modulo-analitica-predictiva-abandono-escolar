@@ -22,7 +22,10 @@ export function toOptionalNumber(value) {
 }
 
 export function sanitizeSearch(value = '') {
-  return String(value).trim().replace(/[%,()]/g, ' ').replace(/\s+/g, ' ');
+  return String(value)
+    .trim()
+    .replace(/[%,()]/g, ' ')
+    .replace(/\s+/g, ' ');
 }
 
 export function mapSingleResultNotFound(error, entity = 'Recurso') {

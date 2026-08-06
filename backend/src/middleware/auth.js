@@ -1,9 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { supabase } from '../config/supabase.js';
 
-// Caché corto del usuario para evitar una consulta a la BD en CADA request.
-// TTL bajo + invalidación explícita en updateUser para que desactivar una
-// cuenta o cambiar su rol siga teniendo efecto casi inmediato.
 const USER_CACHE_TTL_MS = 30 * 1000;
 const userCache = new Map();
 
@@ -17,7 +14,9 @@ async function loadUser(id) {
 
   const { data: user, error } = await supabase
     .from('usuarios')
-    .select('id, email:correo, full_name:nombre_completo, role:rol, institution_id:institucion_id, is_active:activo')
+    .select(
+      'id, email:correo, full_name:nombre_completo, role:rol, institution_id:institucion_id, is_active:activo',
+    )
     .eq('id', id)
     .single();
 

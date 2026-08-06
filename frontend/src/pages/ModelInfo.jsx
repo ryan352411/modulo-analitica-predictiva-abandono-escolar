@@ -32,7 +32,10 @@ export default function ModelInfo() {
           <Cpu className="h-6 w-6 text-primary" /> Modelo de IA
         </h1>
         <button
-          onClick={() => { setNotice(''); retrain.mutate(); }}
+          onClick={() => {
+            setNotice('');
+            retrain.mutate();
+          }}
           disabled={retrain.isPending}
           className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
         >
@@ -41,7 +44,9 @@ export default function ModelInfo() {
         </button>
       </div>
 
-      {notice && <div className="rounded-md bg-primary-light/60 px-4 py-2 text-sm text-ink/80">{notice}</div>}
+      {notice && (
+        <div className="rounded-md bg-primary-light/60 px-4 py-2 text-sm text-ink/80">{notice}</div>
+      )}
 
       {isLoading ? (
         <p className="text-ink/60">Cargando…</p>
@@ -56,7 +61,11 @@ export default function ModelInfo() {
               <Row label="Versión usada" value={data?.last_used_version ?? '—'} />
               <Row
                 label="Última predicción"
-                value={data?.last_prediction_at ? new Date(data.last_prediction_at).toLocaleString('es-MX') : '—'}
+                value={
+                  data?.last_prediction_at
+                    ? new Date(data.last_prediction_at).toLocaleString('es-MX')
+                    : '—'
+                }
               />
               {service?.error && <p className="text-risk-high text-xs">{service.error}</p>}
             </CardBody>
@@ -71,11 +80,15 @@ export default function ModelInfo() {
                   <Row label="Accuracy" value={metrics.accuracy} />
                   <Row label="F1" value={metrics.f1} />
                   <Row label="Recall" value={metrics.recall} />
-                  <Row label="Muestras (train/test)" value={`${metrics.n_train ?? '—'} / ${metrics.n_test ?? '—'}`} />
+                  <Row
+                    label="Muestras (train/test)"
+                    value={`${metrics.n_train ?? '—'} / ${metrics.n_test ?? '—'}`}
+                  />
                 </>
               ) : (
                 <p className="text-ink/50">
-                  Sin métricas. Configura <code>ML_SERVICE_URL</code> y entrena el modelo para verlas.
+                  Sin métricas. Configura <code>ML_SERVICE_URL</code> y entrena el modelo para
+                  verlas.
                 </p>
               )}
             </CardBody>

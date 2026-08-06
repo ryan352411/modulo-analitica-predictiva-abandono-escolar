@@ -11,7 +11,9 @@ export async function listUsers(req, res, next) {
     const institutionId = requireInstitution(req);
     const { data, error } = await supabase
       .from('usuarios')
-      .select('id, institution_id:institucion_id, full_name:nombre_completo, email:correo, role:rol, is_active:activo, last_login:ultimo_acceso, created_at:creado_en')
+      .select(
+        'id, institution_id:institucion_id, full_name:nombre_completo, email:correo, role:rol, is_active:activo, last_login:ultimo_acceso, created_at:creado_en',
+      )
       .eq('institucion_id', institutionId)
       .order('nombre_completo');
 
@@ -47,7 +49,9 @@ export async function createUser(req, res, next) {
         rol: role,
         institucion_id: institutionId,
       })
-      .select('id, institution_id:institucion_id, full_name:nombre_completo, email:correo, role:rol, is_active:activo, created_at:creado_en')
+      .select(
+        'id, institution_id:institucion_id, full_name:nombre_completo, email:correo, role:rol, is_active:activo, created_at:creado_en',
+      )
       .single();
 
     if (error?.code === '23505') {
@@ -93,7 +97,9 @@ export async function updateUser(req, res, next) {
       .update(patch)
       .eq('id', req.params.id)
       .eq('institucion_id', institutionId)
-      .select('id, institution_id:institucion_id, full_name:nombre_completo, email:correo, role:rol, is_active:activo')
+      .select(
+        'id, institution_id:institucion_id, full_name:nombre_completo, email:correo, role:rol, is_active:activo',
+      )
       .single();
 
     if (error?.code === 'PGRST116') {

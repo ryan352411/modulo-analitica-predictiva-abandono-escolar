@@ -1,13 +1,9 @@
-// Script de un solo uso: vacía TODAS las tablas de la base Supabase.
-// Usa la API REST (PostgREST) con la service key — sin dependencias npm.
-// Orden de borrado: hijos antes que padres para respetar las FK.
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Carga manual del .env (evita depender de paquetes no instalados).
 function loadEnv() {
   for (const p of ['../../.env', '../.env', '.env']) {
     const full = resolve(__dirname, p);
@@ -26,7 +22,6 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   process.exit(1);
 }
 
-// Orden: primero las tablas que referencian a otras.
 const TABLAS = [
   'alertas',
   'predicciones',
@@ -44,7 +39,6 @@ const headers = {
   Prefer: 'count=exact',
 };
 
-// Devuelve el nº de filas a partir del header Content-Range (formato "0-9/42").
 const filasDe = (res) => {
   const cr = res.headers.get('content-range');
   return cr ? cr.split('/').pop() : '?';

@@ -6,6 +6,7 @@ Expone POST /predict con el mismo contrato que consume el backend Node
 y devuelve risk_score, risk_level, model_version y contributing_features.
 Si app/model.joblib no existe, ejecutar antes:  python -m app.train
 """
+
 from pathlib import Path
 
 import joblib
@@ -50,7 +51,7 @@ class PredictionInput(BaseModel):
     pending_deliverables: int = Field(0, ge=0)
 
     class Config:
-        extra = "ignore"  # tolera columnas adicionales del registro académico
+        extra = "ignore"
 
 
 class FeatureImportance(BaseModel):
@@ -103,7 +104,7 @@ def retrain():
     from app.train import main as train_main
 
     metrics = train_main()
-    _bundle = None  # fuerza recarga del nuevo model.joblib en la próxima predicción
+    _bundle = None
     return {"status": "ok", "retrained": True, **(metrics or {})}
 
 
@@ -112,16 +113,19 @@ def predict(payload: PredictionInput):
     bundle = get_bundle()
     model, features = bundle["model"], bundle["features"]
 
-    row = pd.DataFrame([{
-        "gpa": payload.gpa,
-        "attendance_rate": payload.attendance_rate,
-        "failed_subjects": payload.failed_subjects,
-        "pending_deliverables": payload.pending_deliverables,
-    }])[features]
+    row = pd.DataFrame(
+        [
+            {
+                "gpa": payload.gpa,
+                "attendance_rate": payload.attendance_rate,
+                "failed_subjects": payload.failed_subjects,
+                "pending_deliverables": payload.pending_deliverables,
+            }
+        ]
+    )[features]
 
     score = float(model.predict_proba(row)[0, 1])
 
-    # Top 3 variables por importancia global del bosque
     importances = model.feature_importances_
     top = np.argsort(importances)[::-1][:3]
     contributing = [

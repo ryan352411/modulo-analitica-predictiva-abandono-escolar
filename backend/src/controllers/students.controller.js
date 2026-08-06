@@ -32,9 +32,20 @@ function buildStudentPayload(body) {
   return payload;
 }
 
-// Iniciales de la escuela: primera letra de cada palabra significativa del
-// nombre (ignora conectores). "Instituto Tecnológico Central" -> "ITC".
-const INITIAL_STOPWORDS = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'en', 'a', 'para', 'por']);
+const INITIAL_STOPWORDS = new Set([
+  'de',
+  'del',
+  'la',
+  'las',
+  'los',
+  'el',
+  'y',
+  'e',
+  'en',
+  'a',
+  'para',
+  'por',
+]);
 
 export function institutionInitials(nombre = '') {
   const initials = String(nombre)
@@ -48,14 +59,12 @@ export function institutionInitials(nombre = '') {
   return initials || 'ESC';
 }
 
-// Cadena de n dígitos (primer dígito 1-9 para garantizar longitud constante).
 function randomDigits(n) {
   let s = String(Math.floor(Math.random() * 9) + 1);
   for (let i = 1; i < n; i++) s += Math.floor(Math.random() * 10);
   return s;
 }
 
-// Genera una matrícula única con el formato <iniciales><8 dígitos>.
 async function generateUniqueMatricula(prefix) {
   for (let attempt = 0; attempt < 10; attempt++) {
     const matricula = `${prefix}${randomDigits(8)}`;
@@ -72,7 +81,6 @@ async function generateUniqueMatricula(prefix) {
   throw err;
 }
 
-// Obtiene el prefijo de iniciales de la institución a partir de su nombre.
 async function institutionPrefix(institutionId) {
   const { data, error } = await supabase
     .from('instituciones')
@@ -141,7 +149,7 @@ export async function listPrograms(req, res, next) {
     if (error) throw error;
 
     const programas = [...new Set((data ?? []).map((r) => r.programa).filter(Boolean))].sort(
-      (a, b) => a.localeCompare(b, 'es')
+      (a, b) => a.localeCompare(b, 'es'),
     );
     res.json({ data: programas });
   } catch (e) {
@@ -154,8 +162,6 @@ export async function createStudent(req, res, next) {
     const institutionId = requireInstitution(req);
     const base = buildStudentPayload(req.body);
 
-    // Validación de datos incompletos -> 422 (Unprocessable Entity).
-    // La matrícula ya no la envía el cliente: se genera automáticamente.
     const camposFaltantes = [];
     if (!base.nombre_completo) camposFaltantes.push('nombre_completo');
     if (!base.fecha_nacimiento) camposFaltantes.push('fecha_nacimiento');
@@ -167,8 +173,6 @@ export async function createStudent(req, res, next) {
       });
     }
 
-    // Matrícula única asignada por el sistema (ignora la del cliente): iniciales
-    // de la escuela + 8 dígitos, p. ej. ITC48291052.
     const prefix = await institutionPrefix(institutionId);
     const matricula = await generateUniqueMatricula(prefix);
     const payload = {
@@ -192,7 +196,6 @@ export async function updateStudent(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
     const payload = buildStudentPayload(req.body);
-    // La matrícula es inmutable: nunca se actualiza aunque llegue en el cuerpo.
     delete payload.matricula;
     delete payload.codigo_alumno;
 
@@ -215,7 +218,6 @@ export async function updateStudent(req, res, next) {
 export async function getStudentTrend(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
-    // Verifica pertenencia a la institución antes de exponer datos.
     const { data: student, error: sErr } = await supabase
       .from('alumnos')
       .select('id')
@@ -245,11 +247,6 @@ export async function getStudentTrend(req, res, next) {
   }
 }
 
-/**
- * Importación masiva desde CSV. El cuerpo se recibe como texto (text/csv).
- * Columnas esperadas (encabezado): matricula, nombre_completo, correo, genero,
- * nivel_socioeconomico, semestre_actual, programa, estatus, fecha_inscripcion.
- */
 export async function importStudents(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
@@ -281,7 +278,6 @@ export async function importStudents(req, res, next) {
       return res.status(400).json({ error: 'Ninguna fila valida', errors });
     }
 
-    // upsert por matricula para que reimportar actualice en lugar de duplicar.
     const { data, error } = await supabase
       .from('alumnos')
       .upsert(payloads, { onConflict: 'matricula' })

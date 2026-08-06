@@ -1,12 +1,6 @@
 import { supabase } from '../config/supabase.js';
 import { requireInstitution } from '../utils/request.js';
 
-/**
- * Lista los logs de auditoría de la institución del usuario (solo admin).
- * Filtros: usuario (user_id), accion (action), fecha_inicio, fecha_fin.
- * Los audit_logs no tienen institution_id, así que se acotan a los usuarios
- * de la institución del solicitante.
- */
 export async function listAuditLogs(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
@@ -15,18 +9,20 @@ export async function listAuditLogs(req, res, next) {
     const limitNumber = Math.min(Math.max(Number(limit) || 50, 1), 200);
     const from = (pageNumber - 1) * limitNumber;
 
-    // Usuarios que pertenecen a la institución del solicitante.
     const { data: members, error: mErr } = await supabase
       .from('usuarios')
       .select('id')
       .eq('institucion_id', institutionId);
     if (mErr) throw mErr;
     const memberIds = (members ?? []).map((m) => m.id);
-    if (!memberIds.length) return res.json({ data: [], total: 0, page: pageNumber, limit: limitNumber });
+    if (!memberIds.length)
+      return res.json({ data: [], total: 0, page: pageNumber, limit: limitNumber });
 
     let query = supabase
       .from('registros_auditoria')
-      .select('id, usuario_id, accion, entidad, entidad_id, detalle, direccion_ip, creado_en', { count: 'exact' })
+      .select('id, usuario_id, accion, entidad, entidad_id, detalle, direccion_ip, creado_en', {
+        count: 'exact',
+      })
       .in('usuario_id', memberIds)
       .order('creado_en', { ascending: false });
 

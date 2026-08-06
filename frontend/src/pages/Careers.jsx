@@ -9,7 +9,7 @@ import { Field, Input } from '../components/ui/Field.jsx';
 export default function Careers() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // null = crear, objeto = editar
+  const [editing, setEditing] = useState(null);
   const [nombre, setNombre] = useState('');
   const [error, setError] = useState('');
 
@@ -25,7 +25,7 @@ export default function Careers() {
         : (await api.post('/careers', { nombre })).data.data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['careers'] });
-      qc.invalidateQueries({ queryKey: ['programs'] }); // el form de alumno usa esta lista
+      qc.invalidateQueries({ queryKey: ['programs'] });
       setOpen(false);
       setNombre('');
       setEditing(null);
@@ -39,7 +39,8 @@ export default function Careers() {
       qc.invalidateQueries({ queryKey: ['careers'] });
       qc.invalidateQueries({ queryKey: ['programs'] });
     },
-    onError: (err) => window.alert(err.response?.data?.error || 'No fue posible eliminar la carrera'),
+    onError: (err) =>
+      window.alert(err.response?.data?.error || 'No fue posible eliminar la carrera'),
   });
 
   function openCreate() {
@@ -91,7 +92,11 @@ export default function Careers() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={2} className="px-5 py-6 text-ink/50">Cargando…</td></tr>
+                <tr>
+                  <td colSpan={2} className="px-5 py-6 text-ink/50">
+                    Cargando…
+                  </td>
+                </tr>
               )}
               {data?.map((c) => (
                 <tr key={c.id} className="border-b border-ink/5">
@@ -115,14 +120,22 @@ export default function Careers() {
                 </tr>
               ))}
               {data?.length === 0 && (
-                <tr><td colSpan={2} className="px-5 py-6 text-ink/50">Aún no hay carreras. Agrega la primera.</td></tr>
+                <tr>
+                  <td colSpan={2} className="px-5 py-6 text-ink/50">
+                    Aún no hay carreras. Agrega la primera.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </CardBody>
       </Card>
 
-      <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Editar carrera' : 'Nueva carrera'}>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={editing ? 'Editar carrera' : 'Nueva carrera'}
+      >
         <form onSubmit={onSubmit} className="space-y-4">
           <Field label="Nombre de la carrera">
             <Input
@@ -137,7 +150,11 @@ export default function Careers() {
           {error && <p className="text-sm text-risk-high">{error}</p>}
 
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5"
+            >
               Cancelar
             </button>
             <button

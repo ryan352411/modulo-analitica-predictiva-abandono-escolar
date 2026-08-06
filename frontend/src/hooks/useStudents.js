@@ -40,14 +40,15 @@ export function useImportStudents() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (csvText) =>
-      (await api.post('/students/import', csvText, {
-        headers: { 'Content-Type': 'text/csv' },
-      })).data.data,
+      (
+        await api.post('/students/import', csvText, {
+          headers: { 'Content-Type': 'text/csv' },
+        })
+      ).data.data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['students'] }),
   });
 }
 
-// Lista de carreras registradas (para el selector del formulario de alumno).
 export function usePrograms() {
   return useQuery({
     queryKey: ['programs'],

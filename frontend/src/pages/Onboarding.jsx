@@ -4,20 +4,7 @@ import { School, LogOut } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Field, Input } from '../components/ui/Field.jsx';
-
-// Vista previa del prefijo (iniciales) que se usará en las matrículas.
-function prefijoDe(nombre = '') {
-  const stop = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'en', 'a', 'para', 'por']);
-  const s = String(nombre)
-    .trim()
-    .split(/\s+/)
-    .filter((w) => w && !stop.has(w.toLowerCase()))
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .replace(/[^A-Z]/g, '');
-  return s || 'ESC';
-}
+import { prefijoMatricula } from '../lib/utils.js';
 
 export default function Onboarding() {
   const { user, completeOnboarding, logout } = useAuth();
@@ -58,8 +45,17 @@ export default function Onboarding() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="Nombre de la escuela" hint={`Prefijo de matrícula: ${prefijoDe(form.nombre)}`}>
-            <Input required maxLength={120} value={form.nombre} onChange={set('nombre')} placeholder="Instituto Tecnológico Central" />
+          <Field
+            label="Nombre de la escuela"
+            hint={`Prefijo de matrícula: ${prefijoMatricula(form.nombre)}`}
+          >
+            <Input
+              required
+              maxLength={120}
+              value={form.nombre}
+              onChange={set('nombre')}
+              placeholder="Instituto Tecnológico Central"
+            />
           </Field>
           <Field label="Clave de trabajo">
             <Input required maxLength={20} value={form.codigo} onChange={set('codigo')} />

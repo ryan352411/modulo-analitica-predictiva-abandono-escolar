@@ -26,22 +26,41 @@ export default function HighRisk() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={5} className="px-5 py-6 text-ink/50">Cargando…</td></tr>}
+              {isLoading && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-ink/50">
+                    Cargando…
+                  </td>
+                </tr>
+              )}
               {data?.map((p) => (
                 <tr key={p.id} className="border-b border-ink/5 hover:bg-primary-light/40">
                   <td className="px-5 py-3 tabular-nums">{p.alumnos?.matricula}</td>
                   <td className="px-5 py-3">
-                    <Link to={`/estudiantes/${p.alumno_id}`} className="font-medium text-primary hover:underline">
+                    <Link
+                      to={`/estudiantes/${p.alumno_id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
                       {p.alumnos?.nombre_completo}
                     </Link>
                   </td>
-                  <td className="px-5 py-3 tabular-nums font-semibold">{(Number(p.puntaje_riesgo) * 100).toFixed(1)}%</td>
-                  <td className="px-5 py-3"><RiskBadge level={p.nivel_riesgo} /></td>
-                  <td className="px-5 py-3 text-ink/60">{new Date(p.predicho_en).toLocaleString('es-MX')}</td>
+                  <td className="px-5 py-3 tabular-nums font-semibold">
+                    {(Number(p.puntaje_riesgo) * 100).toFixed(1)}%
+                  </td>
+                  <td className="px-5 py-3">
+                    <RiskBadge level={p.nivel_riesgo} />
+                  </td>
+                  <td className="px-5 py-3 text-ink/60">
+                    {new Date(p.predicho_en).toLocaleString('es-MX')}
+                  </td>
                 </tr>
               ))}
               {data?.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-6 text-ink/50">Sin estudiantes en riesgo alto. 🎉</td></tr>
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-ink/50">
+                    Sin estudiantes en riesgo alto. 🎉
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

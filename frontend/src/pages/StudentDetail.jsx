@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Pencil, ClipboardPlus } from 'lucide-react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from 'recharts';
 import { Card, CardHeader, CardBody } from '../components/ui/Card.jsx';
 import RiskBadge from '../components/ui/RiskBadge.jsx';
@@ -20,16 +26,19 @@ export default function StudentDetail() {
   if (!student) return <p className="text-risk-high">Estudiante no encontrado.</p>;
 
   const records = [...(student.historial_academico ?? [])].sort((a, b) =>
-    a.periodo.localeCompare(b.periodo)
+    a.periodo.localeCompare(b.periodo),
   );
   const predictions = [...(student.predicciones ?? [])].sort(
-    (a, b) => new Date(b.predicho_en) - new Date(a.predicho_en)
+    (a, b) => new Date(b.predicho_en) - new Date(a.predicho_en),
   );
   const latest = predictions[0];
 
   return (
     <div className="space-y-6">
-      <Link to="/estudiantes" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+      <Link
+        to="/estudiantes"
+        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+      >
         <ArrowLeft className="h-4 w-4" /> Volver a estudiantes
       </Link>
 
@@ -59,7 +68,9 @@ export default function StudentDetail() {
               setPredictionError('');
               predict.mutate(undefined, {
                 onError: (err) => {
-                  setPredictionError(err.response?.data?.error || 'No fue posible generar la prediccion');
+                  setPredictionError(
+                    err.response?.data?.error || 'No fue posible generar la prediccion',
+                  );
                 },
               });
             }}
@@ -86,7 +97,13 @@ export default function StudentDetail() {
                   <XAxis dataKey="periodo" fontSize={12} />
                   <YAxis domain={[0, 10]} fontSize={12} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="promedio" name="Promedio" stroke="#1E5AA8" strokeWidth={2} />
+                  <Line
+                    type="monotone"
+                    dataKey="promedio"
+                    name="Promedio"
+                    stroke="#1E5AA8"
+                    strokeWidth={2}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -100,14 +117,18 @@ export default function StudentDetail() {
         <Card>
           <CardHeader
             title="Última predicción"
-            subtitle={latest ? new Date(latest.predicho_en).toLocaleString('es-MX') : 'Sin predicciones'}
+            subtitle={
+              latest ? new Date(latest.predicho_en).toLocaleString('es-MX') : 'Sin predicciones'
+            }
           />
           <CardBody>
             {latest ? (
               <div className="space-y-4">
                 <p className="text-4xl font-semibold tabular-nums">
                   {(latest.puntaje_riesgo * 100).toFixed(1)}%
-                  <span className="ml-2 align-middle"><RiskBadge level={latest.nivel_riesgo} /></span>
+                  <span className="ml-2 align-middle">
+                    <RiskBadge level={latest.nivel_riesgo} />
+                  </span>
                 </p>
                 <div>
                   <p className="text-sm font-medium mb-2">Factores principales</p>
@@ -115,7 +136,9 @@ export default function StudentDetail() {
                     {(latest.factores_contribuyentes ?? []).map((f) => (
                       <li key={f.feature} className="flex items-center justify-between text-sm">
                         <span className="text-ink/70">{f.label}</span>
-                        <span className="tabular-nums text-ink/50">{(f.importance * 100).toFixed(0)}%</span>
+                        <span className="tabular-nums text-ink/50">
+                          {(f.importance * 100).toFixed(0)}%
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -148,12 +171,18 @@ export default function StudentDetail() {
                 <tr key={p.id} className="border-b border-ink/5">
                   <td className="px-5 py-3">{new Date(p.predicho_en).toLocaleString('es-MX')}</td>
                   <td className="px-5 py-3 tabular-nums">{(p.puntaje_riesgo * 100).toFixed(1)}%</td>
-                  <td className="px-5 py-3"><RiskBadge level={p.nivel_riesgo} /></td>
+                  <td className="px-5 py-3">
+                    <RiskBadge level={p.nivel_riesgo} />
+                  </td>
                   <td className="px-5 py-3 text-ink/60">{p.version_modelo}</td>
                 </tr>
               ))}
               {predictions.length === 0 && (
-                <tr><td colSpan={4} className="px-5 py-6 text-ink/50">Sin predicciones registradas.</td></tr>
+                <tr>
+                  <td colSpan={4} className="px-5 py-6 text-ink/50">
+                    Sin predicciones registradas.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

@@ -36,7 +36,12 @@ export default function Alerts() {
             <CardBody className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium capitalize', severityStyle[a.severidad])}>
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-xs font-medium capitalize',
+                      severityStyle[a.severidad],
+                    )}
+                  >
                     {a.severidad}
                   </span>
                   <span className="text-xs text-ink/50">
@@ -46,14 +51,19 @@ export default function Alerts() {
                 <p className="font-medium">{a.titulo}</p>
                 {a.mensaje && <p className="text-sm text-ink/70">{a.mensaje}</p>}
                 {a.alumnos && (
-                  <Link to={`/estudiantes/${a.alumno_id}`} className="text-sm text-primary hover:underline">
+                  <Link
+                    to={`/estudiantes/${a.alumno_id}`}
+                    className="text-sm text-primary hover:underline"
+                  >
                     Ver expediente de {a.alumnos.nombre_completo} ({a.alumnos.matricula})
                   </Link>
                 )}
               </div>
 
               <div className="flex shrink-0 flex-col items-end gap-2">
-                <span className="text-xs capitalize text-ink/60">{a.estatus?.replace('_', ' ')}</span>
+                <span className="text-xs capitalize text-ink/60">
+                  {a.estatus?.replace('_', ' ')}
+                </span>
                 {a.estatus === 'pendiente' && (
                   <button
                     onClick={() => update.mutate({ id: a.id, status: 'en_atencion' })}
@@ -76,7 +86,8 @@ export default function Alerts() {
         ))}
         {data?.length === 0 && (
           <p className="text-sm text-ink/50">
-            No hay alertas. Se generarán automáticamente cuando una predicción resulte en riesgo alto.
+            No hay alertas. Se generarán automáticamente cuando una predicción resulte en riesgo
+            alto.
           </p>
         )}
       </div>

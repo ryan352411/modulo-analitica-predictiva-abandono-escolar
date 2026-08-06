@@ -10,15 +10,13 @@ const loginAttempts = new Map();
 
 const ACCESS_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 const REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
-// Denylist en memoria de refresh tokens revocados (logout). Para varias
-// instancias conviene un store compartido (Redis); aquí basta para el MVP.
 const revokedRefreshTokens = new Set();
 
 function signAccessToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, institution_id: user.institution_id },
     process.env.JWT_SECRET,
-    { expiresIn: ACCESS_EXPIRES_IN }
+    { expiresIn: ACCESS_EXPIRES_IN },
   );
 }
 
@@ -26,12 +24,14 @@ function signRefreshToken(user) {
   return jwt.sign(
     { id: user.id, type: 'refresh', jti: crypto.randomUUID() },
     process.env.JWT_SECRET,
-    { expiresIn: REFRESH_EXPIRES_IN }
+    { expiresIn: REFRESH_EXPIRES_IN },
   );
 }
 
 function loginKey(req, email) {
-  return `${req.ip}:${String(email || '').trim().toLowerCase()}`;
+  return `${req.ip}:${String(email || '')
+    .trim()
+    .toLowerCase()}`;
 }
 
 function isLoginBlocked(req, email) {
@@ -76,7 +76,9 @@ export async function login(req, res, next) {
 
     const { data: user, error } = await supabase
       .from('usuarios')
-      .select('id, email:correo, password_hash:contrasena_hash, full_name:nombre_completo, role:rol, institution_id:institucion_id')
+      .select(
+        'id, email:correo, password_hash:contrasena_hash, full_name:nombre_completo, role:rol, institution_id:institucion_id',
+      )
       .eq('correo', String(email).trim().toLowerCase())
       .eq('activo', true)
       .single();
@@ -89,7 +91,10 @@ export async function login(req, res, next) {
     const token = signAccessToken(user);
     const refresh_token = signRefreshToken(user);
 
-    await supabase.from('usuarios').update({ ultimo_acceso: new Date().toISOString() }).eq('id', user.id);
+    await supabase
+      .from('usuarios')
+      .update({ ultimo_acceso: new Date().toISOString() })
+      .eq('id', user.id);
     req.user = { id: user.id };
     await audit(req, 'LOGIN', 'usuarios', user.id);
     clearFailedLogins(req, email);
@@ -110,16 +115,13 @@ export async function login(req, res, next) {
   }
 }
 
-/**
- * Registro de una cuenta nueva con correo y contraseña. Body: { full_name, email, password }.
- * Crea un usuario admin SIN escuela (hará el onboarding para crear la suya),
- * igual que el auto-alta de Google. Devuelve tokens y usuario, dejando la sesión iniciada.
- */
 export async function register(req, res, next) {
   try {
     const { full_name, email, password } = req.body || {};
     const name = String(full_name || '').trim();
-    const correo = String(email || '').trim().toLowerCase();
+    const correo = String(email || '')
+      .trim()
+      .toLowerCase();
 
     if (!name || !correo || !password) {
       return res.status(400).json({ error: 'Nombre, correo y contraseña son requeridos' });
@@ -134,7 +136,6 @@ export async function register(req, res, next) {
     const userSelect =
       'id, email:correo, full_name:nombre_completo, role:rol, institution_id:institucion_id';
 
-    // ¿El correo ya está registrado?
     const { data: existing } = await supabase
       .from('usuarios')
       .select('id')
@@ -179,11 +180,6 @@ export async function register(req, res, next) {
   }
 }
 
-/**
- * Inicia sesión con Google. Body: { credential } (ID token de Google Identity
- * Services). Valida el token contra Google, y si el correo no existe crea una
- * cuenta admin SIN escuela (hará el onboarding para crear la suya).
- */
 export async function googleLogin(req, res, next) {
   try {
     const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -195,11 +191,10 @@ export async function googleLogin(req, res, next) {
       return res.status(400).json({ error: 'Falta el token de Google' });
     }
 
-    // Valida el ID token contra Google (verifica firma y expiración).
     let payload;
     try {
       const resp = await fetch(
-        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
       );
       if (!resp.ok) throw new Error('token invalido');
       payload = await resp.json();
@@ -231,7 +226,6 @@ export async function googleLogin(req, res, next) {
       return res.status(401).json({ error: 'Usuario inactivo' });
     }
 
-    // Correo no registrado -> nueva cuenta admin sin escuela (onboarding).
     if (!user) {
       const randomHash = await bcrypt.hash(crypto.randomUUID() + crypto.randomUUID(), 12);
       const { data: created, error: cErr } = await supabase
@@ -251,7 +245,10 @@ export async function googleLogin(req, res, next) {
 
     const token = signAccessToken(user);
     const refresh_token = signRefreshToken(user);
-    await supabase.from('usuarios').update({ ultimo_acceso: new Date().toISOString() }).eq('id', user.id);
+    await supabase
+      .from('usuarios')
+      .update({ ultimo_acceso: new Date().toISOString() })
+      .eq('id', user.id);
     req.user = { id: user.id };
     await audit(req, 'LOGIN', 'usuarios', user.id, { via: 'google' });
 
@@ -271,10 +268,6 @@ export async function googleLogin(req, res, next) {
   }
 }
 
-/**
- * Renueva el access token a partir de un refresh token válido.
- * Body: { refresh_token }
- */
 export async function refresh(req, res, next) {
   try {
     const { refresh_token } = req.body;
@@ -308,9 +301,6 @@ export async function refresh(req, res, next) {
   }
 }
 
-/**
- * Cierra sesión revocando el refresh token enviado. Body: { refresh_token }
- */
 export async function logout(req, res, next) {
   try {
     const { refresh_token } = req.body || {};

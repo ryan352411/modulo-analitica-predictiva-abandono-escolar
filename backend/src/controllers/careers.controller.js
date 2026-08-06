@@ -6,7 +6,6 @@ const SELECT = 'id, nombre, creado_en';
 
 export async function listCareers(req, res, next) {
   try {
-    // Aislada por escuela; admin sin escuela aún no tiene carreras.
     const institutionId = req.user?.institution_id;
     if (!institutionId) return res.json({ data: [] });
 

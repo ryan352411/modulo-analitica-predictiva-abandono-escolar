@@ -35,7 +35,9 @@ export default function Students() {
     reader.onload = () => {
       importer.mutate(String(reader.result), {
         onSuccess: (res) =>
-          setNotice(`Importados ${res.imported} estudiantes${res.errors?.length ? `, ${res.errors.length} con error` : ''}.`),
+          setNotice(
+            `Importados ${res.imported} estudiantes${res.errors?.length ? `, ${res.errors.length} con error` : ''}.`,
+          ),
         onError: (err) => setNotice(err.response?.data?.error || 'Error al importar el CSV.'),
       });
     };
@@ -60,7 +62,10 @@ export default function Students() {
             <input
               placeholder="Buscar por nombre o matrícula"
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-64 rounded-md border border-ink/20 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
@@ -81,14 +86,26 @@ export default function Students() {
               >
                 <Upload className="h-4 w-4" /> Importar CSV
               </button>
-              <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onPickFile} className="hidden" />
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".csv,text/csv"
+                onChange={onPickFile}
+                className="hidden"
+              />
             </>
           )}
 
           <div className="inline-flex items-center rounded-md border border-ink/20 text-sm overflow-hidden">
-            <span className="px-2 text-ink/40"><Download className="h-4 w-4" /></span>
+            <span className="px-2 text-ink/40">
+              <Download className="h-4 w-4" />
+            </span>
             {['csv', 'xlsx', 'pdf'].map((f) => (
-              <button key={f} onClick={() => onExport(f)} className="px-2.5 py-2 hover:bg-ink/5 uppercase text-xs font-medium">
+              <button
+                key={f}
+                onClick={() => onExport(f)}
+                className="px-2.5 py-2 hover:bg-ink/5 uppercase text-xs font-medium"
+              >
                 {f}
               </button>
             ))}
@@ -123,15 +140,21 @@ export default function Students() {
                 <p className="text-xs text-ink/60">Estudiantes evaluados</p>
               </div>
               <div className="rounded-lg border border-ink/10 p-4">
-                <p className="text-2xl font-semibold tabular-nums text-primary">{batchResult.generated}</p>
+                <p className="text-2xl font-semibold tabular-nums text-primary">
+                  {batchResult.generated}
+                </p>
                 <p className="text-xs text-ink/60">Predicciones generadas</p>
               </div>
               <div className="rounded-lg border border-risk-high/30 bg-risk-high/5 p-4">
-                <p className="text-2xl font-semibold tabular-nums text-risk-high">{batchResult.high_risk}</p>
+                <p className="text-2xl font-semibold tabular-nums text-risk-high">
+                  {batchResult.high_risk}
+                </p>
                 <p className="text-xs text-ink/60">En riesgo alto o crítico</p>
               </div>
               <div className="rounded-lg border border-ink/10 p-4">
-                <p className="text-2xl font-semibold tabular-nums text-ink/50">{batchResult.skipped}</p>
+                <p className="text-2xl font-semibold tabular-nums text-ink/50">
+                  {batchResult.skipped}
+                </p>
                 <p className="text-xs text-ink/60">Omitidos (sin registro académico)</p>
               </div>
             </div>
@@ -168,13 +191,20 @@ export default function Students() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={5} className="px-5 py-6 text-ink/50">Cargando…</td></tr>
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-ink/50">
+                    Cargando…
+                  </td>
+                </tr>
               )}
               {data?.data?.map((s) => (
                 <tr key={s.id} className="border-b border-ink/5 hover:bg-primary-light/40">
                   <td className="px-5 py-3 tabular-nums">{s.matricula}</td>
                   <td className="px-5 py-3">
-                    <Link to={`/estudiantes/${s.id}`} className="font-medium text-primary hover:underline">
+                    <Link
+                      to={`/estudiantes/${s.id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
                       {s.nombre_completo}
                     </Link>
                   </td>
@@ -184,7 +214,11 @@ export default function Students() {
                 </tr>
               ))}
               {data?.data?.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-6 text-ink/50">Sin resultados.</td></tr>
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-ink/50">
+                    Sin resultados.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

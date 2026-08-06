@@ -20,7 +20,7 @@ const EMPTY = {
 };
 
 export default function StudentForm() {
-  const { id } = useParams();           // si existe → modo edición
+  const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
 
@@ -82,7 +82,11 @@ export default function StudentForm() {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field
               label="Matrícula"
-              hint={isEdit ? 'La matrícula no se puede modificar' : 'Se asignará automáticamente al guardar'}
+              hint={
+                isEdit
+                  ? 'La matrícula no se puede modificar'
+                  : 'Se asignará automáticamente al guardar'
+              }
             >
               <Input
                 value={form.matricula}
@@ -92,13 +96,23 @@ export default function StudentForm() {
               />
             </Field>
             <Field label="Nombre completo">
-              <Input required maxLength={120} value={form.nombre_completo} onChange={set('nombre_completo')} />
+              <Input
+                required
+                maxLength={120}
+                value={form.nombre_completo}
+                onChange={set('nombre_completo')}
+              />
             </Field>
             <Field label="Correo">
               <Input type="email" maxLength={120} value={form.correo} onChange={set('correo')} />
             </Field>
             <Field label="Fecha de nacimiento">
-              <Input type="date" required value={form.fecha_nacimiento || ''} onChange={set('fecha_nacimiento')} />
+              <Input
+                type="date"
+                required
+                value={form.fecha_nacimiento || ''}
+                onChange={set('fecha_nacimiento')}
+              />
             </Field>
             <Field label="Género">
               <Select value={form.genero || ''} onChange={set('genero')}>
@@ -121,15 +135,29 @@ export default function StudentForm() {
               <Select required value={form.programa} onChange={set('programa')}>
                 <option value="">Selecciona una carrera</option>
                 {programs.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
               </Select>
             </Field>
             <Field label="Semestre actual">
-              <Input type="number" min={1} max={12} required value={form.semestre_actual} onChange={set('semestre_actual')} />
+              <Input
+                type="number"
+                min={1}
+                max={12}
+                required
+                value={form.semestre_actual}
+                onChange={set('semestre_actual')}
+              />
             </Field>
             <Field label="Fecha de inscripción">
-              <Input type="date" required value={form.fecha_inscripcion || ''} onChange={set('fecha_inscripcion')} />
+              <Input
+                type="date"
+                required
+                value={form.fecha_inscripcion || ''}
+                onChange={set('fecha_inscripcion')}
+              />
             </Field>
             <Field label="Estatus">
               <Select value={form.estatus} onChange={set('estatus')}>
@@ -154,7 +182,11 @@ export default function StudentForm() {
                 disabled={mutation.isPending}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
               >
-                {mutation.isPending ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear estudiante'}
+                {mutation.isPending
+                  ? 'Guardando…'
+                  : isEdit
+                    ? 'Guardar cambios'
+                    : 'Crear estudiante'}
               </button>
             </div>
           </form>

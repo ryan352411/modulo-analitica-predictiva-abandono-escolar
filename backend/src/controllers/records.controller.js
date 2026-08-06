@@ -32,7 +32,14 @@ async function assertStudentInInstitution(studentId, institutionId) {
 
 function buildRecordPayload(body) {
   const payload = pick(body, RECORD_FIELDS);
-  for (const key of ['promedio', 'tasa_asistencia', 'materias_reprobadas', 'entregas_pendientes', 'creditos_obtenidos', 'creditos_totales']) {
+  for (const key of [
+    'promedio',
+    'tasa_asistencia',
+    'materias_reprobadas',
+    'entregas_pendientes',
+    'creditos_obtenidos',
+    'creditos_totales',
+  ]) {
     if (payload[key] !== undefined) payload[key] = toOptionalNumber(payload[key]);
   }
   return payload;

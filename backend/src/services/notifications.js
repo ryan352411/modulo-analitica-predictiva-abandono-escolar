@@ -1,15 +1,3 @@
-/**
- * Servicio de notificaciones — email (SendGrid) y SMS (Twilio) vía API HTTP.
- *
- * No requiere SDKs: usa fetch nativo. Cada canal se activa solo si sus
- * variables de entorno están configuradas; de lo contrario cae a un
- * "fallback" que registra la notificación en consola (útil en desarrollo).
- *
- * Variables de entorno:
- *   SENDGRID_API_KEY, SENDGRID_FROM_EMAIL
- *   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
- */
-
 const SENDGRID_URL = 'https://api.sendgrid.com/v3/mail/send';
 
 export function emailEnabled() {
@@ -20,7 +8,7 @@ export function smsEnabled() {
   return Boolean(
     process.env.TWILIO_ACCOUNT_SID &&
       process.env.TWILIO_AUTH_TOKEN &&
-      process.env.TWILIO_FROM_NUMBER
+      process.env.TWILIO_FROM_NUMBER,
   );
 }
 
@@ -85,11 +73,6 @@ export async function sendSms({ to, text }) {
   }
 }
 
-/**
- * Notifica a los responsables (admin/coordinador activos de la institución)
- * cuando un estudiante alcanza riesgo alto. No interrumpe el flujo si falla.
- * @param {object} supabase cliente Supabase ya configurado
- */
 export async function notifyHighRisk(supabase, { student, prediction }) {
   try {
     const { data: recipients } = await supabase
@@ -110,9 +93,7 @@ export async function notifyHighRisk(supabase, { student, prediction }) {
       `Se recomienda intervención del tutor.`;
 
     await Promise.all(
-      recipients
-        .filter((r) => r.correo)
-        .map((r) => sendEmail({ to: r.correo, subject, text }))
+      recipients.filter((r) => r.correo).map((r) => sendEmail({ to: r.correo, subject, text })),
     );
   } catch (e) {
     console.error('[notificaciones:notifyHighRisk] error:', e.message);

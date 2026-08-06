@@ -38,7 +38,13 @@ export default function Dashboard() {
           <CardBody className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90}>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={55}
+                  outerRadius={90}
+                >
                   {pieData.map((entry) => (
                     <Cell key={entry.level} fill={RISK_COLORS[entry.level]} />
                   ))}

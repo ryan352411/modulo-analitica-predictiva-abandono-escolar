@@ -25,17 +25,13 @@ dotenv.config();
 const app = express();
 
 app.use(helmet());
-// Si FRONTEND_URL no está definida, restringir a localhost en lugar de reflejar
-// cualquier origen (comportamiento por defecto del paquete cors con origin undefined).
 const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
 app.use(cors({ origin: allowedOrigin, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Documentación
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Rutas
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'abandono-escolar-api' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);

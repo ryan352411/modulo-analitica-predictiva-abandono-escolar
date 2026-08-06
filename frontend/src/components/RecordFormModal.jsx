@@ -3,10 +3,8 @@ import Modal from './ui/Modal.jsx';
 import { Field, Input, Select, Textarea } from './ui/Field.jsx';
 import { useCreateRecord } from '../hooks/useStudentMutations.js';
 
-// Todos los registros nuevos corresponden al año en curso (2026).
 const PERIODOS_2026 = ['2026-1', '2026-2', '2026-3'];
 
-// Fecha de hoy (AAAA-MM-DD) para prellenar la fecha de carga.
 const HOY = new Date().toISOString().slice(0, 10);
 
 const EMPTY = {
@@ -58,7 +56,9 @@ export default function RecordFormModal({ studentId, open, onClose }) {
         <Field label="Periodo" hint="Ciclo 2026">
           <Select required value={form.periodo} onChange={set('periodo')}>
             {PERIODOS_2026.map((p) => (
-              <option key={p} value={p}>{p}</option>
+              <option key={p} value={p}>
+                {p}
+              </option>
             ))}
           </Select>
         </Field>
@@ -66,22 +66,66 @@ export default function RecordFormModal({ studentId, open, onClose }) {
           <Input type="date" required value={form.fecha_carga} onChange={set('fecha_carga')} />
         </Field>
         <Field label="Promedio (0–10)">
-          <Input type="number" step="0.01" min={0} max={10} required value={form.promedio} onChange={set('promedio')} />
+          <Input
+            type="number"
+            step="0.01"
+            min={0}
+            max={10}
+            required
+            value={form.promedio}
+            onChange={set('promedio')}
+          />
         </Field>
         <Field label="Asistencia (%)">
-          <Input type="number" step="0.1" min={0} max={100} required value={form.tasa_asistencia} onChange={set('tasa_asistencia')} />
+          <Input
+            type="number"
+            step="0.1"
+            min={0}
+            max={100}
+            required
+            value={form.tasa_asistencia}
+            onChange={set('tasa_asistencia')}
+          />
         </Field>
         <Field label="Materias reprobadas">
-          <Input type="number" min={0} max={50} required value={form.materias_reprobadas} onChange={set('materias_reprobadas')} />
+          <Input
+            type="number"
+            min={0}
+            max={50}
+            required
+            value={form.materias_reprobadas}
+            onChange={set('materias_reprobadas')}
+          />
         </Field>
         <Field label="Entregas pendientes">
-          <Input type="number" min={0} max={100} required value={form.entregas_pendientes} onChange={set('entregas_pendientes')} />
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            required
+            value={form.entregas_pendientes}
+            onChange={set('entregas_pendientes')}
+          />
         </Field>
         <Field label="Créditos obtenidos">
-          <Input type="number" min={0} max={500} required value={form.creditos_obtenidos} onChange={set('creditos_obtenidos')} />
+          <Input
+            type="number"
+            min={0}
+            max={500}
+            required
+            value={form.creditos_obtenidos}
+            onChange={set('creditos_obtenidos')}
+          />
         </Field>
         <Field label="Créditos del periodo">
-          <Input type="number" min={0} max={500} required value={form.creditos_totales} onChange={set('creditos_totales')} />
+          <Input
+            type="number"
+            min={0}
+            max={500}
+            required
+            value={form.creditos_totales}
+            onChange={set('creditos_totales')}
+          />
         </Field>
         <div className="sm:col-span-2">
           <Field label="Observaciones">
@@ -92,7 +136,11 @@ export default function RecordFormModal({ studentId, open, onClose }) {
         {error && <p className="sm:col-span-2 text-sm text-risk-high">{error}</p>}
 
         <div className="sm:col-span-2 flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5"
+          >
             Cancelar
           </button>
           <button

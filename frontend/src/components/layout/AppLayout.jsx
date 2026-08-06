@@ -1,5 +1,17 @@
 import { NavLink, Outlet, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Bell, LogOut, GraduationCap, ShieldCheck, AlertTriangle, Cpu, ScrollText, School, BookOpen } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  Bell,
+  LogOut,
+  GraduationCap,
+  ShieldCheck,
+  AlertTriangle,
+  Cpu,
+  ScrollText,
+  School,
+  BookOpen,
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { cn } from '../../lib/utils.js';
 
@@ -18,7 +30,6 @@ const navItems = [
 export default function AppLayout() {
   const { user, logout } = useAuth();
 
-  // Admin sin escuela (recién creado con Google): debe crear la suya primero.
   if (user && !user.institution_id) return <Navigate to="/onboarding" replace />;
 
   return (
@@ -39,21 +50,21 @@ export default function AppLayout() {
               return !item.adminOnly || user?.role === 'admin';
             })
             .map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-                  isActive ? 'bg-primary text-white' : 'text-white/70 hover:bg-white/10'
-                )
-              }
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </NavLink>
-          ))}
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                    isActive ? 'bg-primary text-white' : 'text-white/70 hover:bg-white/10',
+                  )
+                }
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </NavLink>
+            ))}
         </nav>
 
         <div className="px-4 py-4 border-t border-white/10">

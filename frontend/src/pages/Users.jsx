@@ -16,7 +16,6 @@ export default function Users() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
-  // Cambio de contraseña: usuario objetivo + nueva contraseña + error.
   const [pwUser, setPwUser] = useState(null);
   const [pwValue, setPwValue] = useState('');
   const [pwError, setPwError] = useState('');
@@ -57,9 +56,13 @@ export default function Users() {
     update.mutate(
       { id: pwUser.id, password: pwValue },
       {
-        onSuccess: () => { setPwUser(null); setPwValue(''); },
-        onError: (err) => setPwError(err.response?.data?.error || 'No fue posible cambiar la contraseña'),
-      }
+        onSuccess: () => {
+          setPwUser(null);
+          setPwValue('');
+        },
+        onError: (err) =>
+          setPwError(err.response?.data?.error || 'No fue posible cambiar la contraseña'),
+      },
     );
   }
 
@@ -68,7 +71,10 @@ export default function Users() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Usuarios</h1>
         <button
-          onClick={() => { setError(''); setOpen(true); }}
+          onClick={() => {
+            setError('');
+            setOpen(true);
+          }}
           className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
         >
           <UserPlus className="h-4 w-4" /> Nuevo usuario
@@ -90,7 +96,11 @@ export default function Users() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={6} className="px-5 py-6 text-ink/50">Cargando…</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-5 py-6 text-ink/50">
+                    Cargando…
+                  </td>
+                </tr>
               )}
               {data?.map((u) => (
                 <tr key={u.id} className="border-b border-ink/5">
@@ -114,10 +124,12 @@ export default function Users() {
                     {u.last_login ? new Date(u.last_login).toLocaleString('es-MX') : 'Nunca'}
                   </td>
                   <td className="px-5 py-3">
-                    <span className={cn(
-                      'rounded-full px-2 py-0.5 text-xs font-medium',
-                      u.is_active ? 'bg-risk-low/10 text-risk-low' : 'bg-ink/10 text-ink/50'
-                    )}>
+                    <span
+                      className={cn(
+                        'rounded-full px-2 py-0.5 text-xs font-medium',
+                        u.is_active ? 'bg-risk-low/10 text-risk-low' : 'bg-ink/10 text-ink/50',
+                      )}
+                    >
                       {u.is_active ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
@@ -148,7 +160,11 @@ export default function Users() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Nuevo usuario">
         <form
-          onSubmit={(e) => { e.preventDefault(); setError(''); create.mutate(form); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            setError('');
+            create.mutate(form);
+          }}
           className="space-y-4"
         >
           <Field label="Nombre completo">
@@ -158,7 +174,13 @@ export default function Users() {
             <Input type="email" required value={form.email} onChange={set('email')} />
           </Field>
           <Field label="Contraseña temporal" hint="Mínimo 8 caracteres">
-            <Input type="password" required minLength={8} value={form.password} onChange={set('password')} />
+            <Input
+              type="password"
+              required
+              minLength={8}
+              value={form.password}
+              onChange={set('password')}
+            />
           </Field>
           <Field label="Rol">
             <Select value={form.role} onChange={set('role')}>
@@ -171,7 +193,11 @@ export default function Users() {
           {error && <p className="text-sm text-risk-high">{error}</p>}
 
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5"
+            >
               Cancelar
             </button>
             <button
@@ -206,7 +232,11 @@ export default function Users() {
           {pwError && <p className="text-sm text-risk-high">{pwError}</p>}
 
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setPwUser(null)} className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5">
+            <button
+              type="button"
+              onClick={() => setPwUser(null)}
+              className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5"
+            >
               Cancelar
             </button>
             <button

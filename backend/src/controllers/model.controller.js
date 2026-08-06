@@ -15,15 +15,10 @@ async function mlFetch(path, options = {}, timeout = 8000) {
   return res.json();
 }
 
-/**
- * Información del modelo activo: estado del microservicio + métricas/versión.
- * Si ML_SERVICE_URL no está configurada, reporta el modo stub local.
- */
 export async function getModelInfo(req, res, next) {
   try {
     const institutionId = requireInstitution(req);
 
-    // Última versión de modelo realmente usada en esta institución.
     const { data: lastPrediction } = await supabase
       .from('predicciones')
       .select('version_modelo, predicho_en, alumnos!inner(institucion_id)')
@@ -54,9 +49,6 @@ export async function getModelInfo(req, res, next) {
   }
 }
 
-/**
- * Dispara el reentrenamiento en el microservicio ML. Requiere ML_SERVICE_URL.
- */
 export async function retrainModel(req, res, next) {
   try {
     if (!ML_URL()) {

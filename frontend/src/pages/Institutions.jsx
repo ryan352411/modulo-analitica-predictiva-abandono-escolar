@@ -5,27 +5,14 @@ import { api } from '../lib/api.js';
 import { Card, CardBody } from '../components/ui/Card.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import { Field, Input } from '../components/ui/Field.jsx';
+import { prefijoMatricula } from '../lib/utils.js';
 
 const EMPTY = { nombre: '', codigo: '', direccion: '' };
-
-// Vista previa del prefijo (iniciales) que se usará en las matrículas.
-function prefijoDe(nombre = '') {
-  const stop = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'en', 'a', 'para', 'por']);
-  const s = String(nombre)
-    .trim()
-    .split(/\s+/)
-    .filter((w) => w && !stop.has(w.toLowerCase()))
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .replace(/[^A-Z]/g, '');
-  return s || 'ESC';
-}
 
 export default function Institutions() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // null = crear, objeto = editar
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
 
@@ -51,7 +38,8 @@ export default function Institutions() {
   const remove = useMutation({
     mutationFn: async (id) => api.delete(`/institutions/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['institutions'] }),
-    onError: (err) => window.alert(err.response?.data?.error || 'No fue posible eliminar la escuela'),
+    onError: (err) =>
+      window.alert(err.response?.data?.error || 'No fue posible eliminar la escuela'),
   });
 
   function set(key) {
@@ -67,7 +55,11 @@ export default function Institutions() {
 
   function openEdit(inst) {
     setEditing(inst);
-    setForm({ nombre: inst.nombre || '', codigo: inst.codigo || '', direccion: inst.direccion || '' });
+    setForm({
+      nombre: inst.nombre || '',
+      codigo: inst.codigo || '',
+      direccion: inst.direccion || '',
+    });
     setError('');
     setOpen(true);
   }
@@ -79,7 +71,9 @@ export default function Institutions() {
   }
 
   function onDelete(inst) {
-    if (window.confirm(`¿Eliminar la escuela "${inst.nombre}"? Esta acción no se puede deshacer.`)) {
+    if (
+      window.confirm(`¿Eliminar la escuela "${inst.nombre}"? Esta acción no se puede deshacer.`)
+    ) {
       remove.mutate(inst.id);
     }
   }
@@ -114,7 +108,11 @@ export default function Institutions() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={5} className="px-5 py-6 text-ink/50">Cargando…</td></tr>
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-ink/50">
+                    Cargando…
+                  </td>
+                </tr>
               )}
               {data?.map((inst) => (
                 <tr key={inst.id} className="border-b border-ink/5">
@@ -147,20 +145,34 @@ export default function Institutions() {
                 </tr>
               ))}
               {data?.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-6 text-ink/50">Aún no hay escuelas registradas.</td></tr>
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-ink/50">
+                    Aún no hay escuelas registradas.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </CardBody>
       </Card>
 
-      <Modal open={open} onClose={() => setOpen(false)} title={editing ? 'Editar escuela' : 'Nueva escuela'}>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={editing ? 'Editar escuela' : 'Nueva escuela'}
+      >
         <form onSubmit={onSubmit} className="space-y-4">
           <Field
             label="Nombre de la escuela"
-            hint={`Prefijo de matrícula: ${prefijoDe(form.nombre)}`}
+            hint={`Prefijo de matrícula: ${prefijoMatricula(form.nombre)}`}
           >
-            <Input required maxLength={120} value={form.nombre} onChange={set('nombre')} placeholder="Instituto Tecnológico Central" />
+            <Input
+              required
+              maxLength={120}
+              value={form.nombre}
+              onChange={set('nombre')}
+              placeholder="Instituto Tecnológico Central"
+            />
           </Field>
           <Field label="Clave de trabajo">
             <Input required maxLength={20} value={form.codigo} onChange={set('codigo')} />
@@ -172,7 +184,11 @@ export default function Institutions() {
           {error && <p className="text-sm text-risk-high">{error}</p>}
 
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5"
+            >
               Cancelar
             </button>
             <button
