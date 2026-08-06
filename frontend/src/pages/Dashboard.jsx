@@ -1,4 +1,16 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
 import { Users, Bell, Activity } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../components/ui/Card.jsx';
 import RiskBadge from '../components/ui/RiskBadge.jsx';
@@ -24,11 +36,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KpiCard icon={Users} label="Estudiantes activos" value={data.total_students} />
         <KpiCard icon={Bell} label="Alertas pendientes" value={data.active_alerts} />
-        <KpiCard
-          icon={Activity}
-          label="Predicciones recientes"
-          value={data.recent_predictions.length}
-        />
+        <KpiCard icon={Activity} label="Predicciones totales" value={data.total_predictions} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -79,6 +87,36 @@ export default function Dashboard() {
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader
+          title="Tendencia de riesgo"
+          subtitle="Promedio mensual de las últimas predicciones"
+        />
+        <CardBody className="h-72">
+          {data.risk_trend?.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data.risk_trend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="label" fontSize={12} />
+                <YAxis domain={[0, 100]} fontSize={12} unit="%" />
+                <Tooltip formatter={(value) => [`${value}%`, 'Riesgo promedio']} />
+                <Line
+                  type="monotone"
+                  dataKey="avg_percent"
+                  name="Riesgo promedio"
+                  stroke="#1E5AA8"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-ink/50">
+              Aún no hay suficientes predicciones para mostrar la tendencia.
+            </p>
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
 import { Card, CardHeader, CardBody } from '../components/ui/Card.jsx';
 import RiskBadge from '../components/ui/RiskBadge.jsx';
 import RecordFormModal from '../components/RecordFormModal.jsx';
-import { useStudent, useGeneratePrediction } from '../hooks/useStudents.js';
+import { useStudent, useGeneratePrediction, useStudentTrend } from '../hooks/useStudents.js';
 import { useDeleteStudent } from '../hooks/useStudentMutations.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { mensajeError } from '../lib/utils.js';
@@ -23,6 +23,7 @@ export default function StudentDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: student, isLoading } = useStudent(id);
+  const { data: trend } = useStudentTrend(id);
   const predict = useGeneratePrediction(id);
   const deleteStudent = useDeleteStudent();
   const [recordOpen, setRecordOpen] = useState(false);
@@ -184,6 +185,81 @@ export default function StudentDetail() {
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader title="Historial académico" subtitle="Registros capturados por periodo" />
+        <CardBody className="p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-ink/10 text-left text-ink/60">
+                <th className="px-5 py-3 font-medium">Periodo</th>
+                <th className="px-5 py-3 font-medium">Promedio</th>
+                <th className="px-5 py-3 font-medium">Asistencia</th>
+                <th className="px-5 py-3 font-medium">Reprobadas</th>
+                <th className="px-5 py-3 font-medium">Entregas pend.</th>
+                <th className="px-5 py-3 font-medium">Créditos</th>
+                <th className="px-5 py-3 font-medium">Observaciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r) => (
+                <tr key={r.id} className="border-b border-ink/5">
+                  <td className="px-5 py-3 tabular-nums">{r.periodo}</td>
+                  <td className="px-5 py-3 tabular-nums">{r.promedio}</td>
+                  <td className="px-5 py-3 tabular-nums">{r.tasa_asistencia}%</td>
+                  <td className="px-5 py-3 tabular-nums">{r.materias_reprobadas}</td>
+                  <td className="px-5 py-3 tabular-nums">{r.entregas_pendientes}</td>
+                  <td className="px-5 py-3 tabular-nums">
+                    {r.creditos_obtenidos}/{r.creditos_totales}
+                  </td>
+                  <td className="px-5 py-3 text-ink/60">{r.observaciones || '—'}</td>
+                </tr>
+              ))}
+              {records.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-5 py-6 text-ink/50">
+                    Sin registros académicos.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title="Evolución del riesgo" subtitle="Porcentaje de riesgo por predicción" />
+        <CardBody className="h-64">
+          {trend && trend.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  dataKey="predicho_en"
+                  fontSize={12}
+                  tickFormatter={(v) => new Date(v).toLocaleDateString('es-MX')}
+                />
+                <YAxis domain={[0, 100]} fontSize={12} unit="%" />
+                <Tooltip
+                  labelFormatter={(v) => new Date(v).toLocaleString('es-MX')}
+                  formatter={(value) => [`${value}%`, 'Riesgo']}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="risk_percent"
+                  name="Riesgo"
+                  stroke="#D14545"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-ink/50">
+              Aún no hay predicciones para graficar la evolución del riesgo.
+            </p>
+          )}
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader title="Historial de predicciones" />

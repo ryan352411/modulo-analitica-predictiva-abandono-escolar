@@ -16,6 +16,14 @@ export function useStudent(id) {
   });
 }
 
+export function useStudentTrend(id) {
+  return useQuery({
+    queryKey: ['students', id, 'trend'],
+    queryFn: async () => (await api.get(`/students/${id}/trend`)).data.data,
+    enabled: !!id,
+  });
+}
+
 export function useGeneratePrediction(studentId) {
   const qc = useQueryClient();
   return useMutation({
