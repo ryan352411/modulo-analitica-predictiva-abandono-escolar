@@ -15,7 +15,7 @@ import { Users, Bell, Activity } from 'lucide-react';
 import { Card, CardHeader, CardBody } from '../components/ui/Card.jsx';
 import RiskBadge from '../components/ui/RiskBadge.jsx';
 import { useDashboardSummary } from '../hooks/useDashboard.js';
-import { riskHex } from '../lib/utils.js';
+import { cn, riskHex } from '../lib/utils.js';
 
 export default function Dashboard() {
   const { data, isLoading, error } = useDashboardSummary();
@@ -34,9 +34,19 @@ export default function Dashboard() {
       <h1 className="text-2xl font-semibold">Dashboard</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KpiCard icon={Users} label="Estudiantes activos" value={data.total_students} />
-        <KpiCard icon={Bell} label="Alertas pendientes" value={data.active_alerts} />
-        <KpiCard icon={Activity} label="Predicciones totales" value={data.total_predictions} />
+        <KpiCard
+          icon={Users}
+          label="Estudiantes activos"
+          value={data.total_students}
+          tone="primary"
+        />
+        <KpiCard icon={Bell} label="Alertas pendientes" value={data.active_alerts} tone="amber" />
+        <KpiCard
+          icon={Activity}
+          label="Predicciones totales"
+          value={data.total_predictions}
+          tone="accent"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -97,7 +107,7 @@ export default function Dashboard() {
           {data.risk_trend?.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.risk_trend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6EAF0" />
                 <XAxis dataKey="label" fontSize={12} />
                 <YAxis domain={[0, 100]} fontSize={12} unit="%" />
                 <Tooltip formatter={(value) => [`${value}%`, 'Riesgo promedio']} />
@@ -105,7 +115,7 @@ export default function Dashboard() {
                   type="monotone"
                   dataKey="avg_percent"
                   name="Riesgo promedio"
-                  stroke="#1E5AA8"
+                  stroke="#3E5C9A"
                   strokeWidth={2}
                 />
               </LineChart>
@@ -121,12 +131,18 @@ export default function Dashboard() {
   );
 }
 
-function KpiCard({ icon: Icon, label, value }) {
+const KPI_TONES = {
+  primary: 'bg-primary-light text-primary',
+  accent: 'bg-accent-light text-accent',
+  amber: 'bg-risk-mid/10 text-risk-mid',
+};
+
+function KpiCard({ icon: Icon, label, value, tone = 'primary' }) {
   return (
     <Card>
       <CardBody className="flex items-center gap-4">
-        <div className="rounded-lg bg-primary-light p-3">
-          <Icon className="h-5 w-5 text-primary" />
+        <div className={cn('rounded-lg p-3', KPI_TONES[tone])}>
+          <Icon className="h-5 w-5" />
         </div>
         <div>
           <p className="text-2xl font-semibold tabular-nums">{value}</p>

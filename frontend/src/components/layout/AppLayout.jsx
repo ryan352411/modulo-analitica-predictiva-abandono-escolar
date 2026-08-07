@@ -36,7 +36,7 @@ export default function AppLayout() {
     <div className="flex h-screen overflow-hidden">
       <aside className="w-64 shrink-0 bg-ink text-white flex flex-col h-screen sticky top-0">
         <div className="flex items-center gap-2 px-5 py-5 border-b border-white/10">
-          <GraduationCap className="h-6 w-6 text-primary-light" />
+          <GraduationCap className="h-6 w-6 text-accent" />
           <div className="leading-tight">
             <p className="font-semibold text-sm">Analítica Predictiva</p>
             <p className="text-xs text-white/60">Abandono Escolar</p>

@@ -32,10 +32,10 @@ export const riskLabel = { bajo: 'Bajo', medio: 'Medio', alto: 'Alto', critico: 
 
 // Hex de cada nivel, para las gráficas de Recharts (no aceptan clases de Tailwind).
 export const riskHex = {
-  bajo: '#2E9E6B',
-  medio: '#E5A33D',
-  alto: '#D14545',
-  critico: '#7F1D1D',
+  bajo: '#3E9E6E',
+  medio: '#E0A13B',
+  alto: '#D2604F',
+  critico: '#8E2F2F',
 };
 
 export const ESTATUS_ALUMNO = [

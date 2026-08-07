@@ -4,11 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paleta institucional del módulo
-        ink: '#1B2733',
-        paper: '#F7F8FA',
-        primary: { DEFAULT: '#1E5AA8', dark: '#15457F', light: '#E8F0FB' },
-        risk: { low: '#2E9E6B', mid: '#E5A33D', high: '#D14545', critical: '#7F1D1D' },
+        // Paleta institucional — "Índigo & Teal" (confianza serena)
+        ink: '#1E2A38',
+        paper: '#F5F7FA',
+        primary: { DEFAULT: '#3E5C9A', dark: '#2C4576', light: '#EAEFF9' },
+        accent: { DEFAULT: '#2C9D8F', dark: '#218475', light: '#E3F4F1' },
+        risk: { low: '#3E9E6E', mid: '#E0A13B', high: '#D2604F', critical: '#8E2F2F' },
       },
       fontFamily: {
         sans: ['"Inter"', 'system-ui', 'sans-serif'],

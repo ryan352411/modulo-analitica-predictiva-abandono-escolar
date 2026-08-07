@@ -135,7 +135,7 @@ export default function StudentDetail() {
             {records.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={records}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E6EAF0" />
                   <XAxis dataKey="periodo" fontSize={12} />
                   <YAxis domain={[0, 10]} fontSize={12} />
                   <Tooltip />
@@ -143,7 +143,7 @@ export default function StudentDetail() {
                     type="monotone"
                     dataKey="promedio"
                     name="Promedio"
-                    stroke="#1E5AA8"
+                    stroke="#3E5C9A"
                     strokeWidth={2}
                   />
                 </LineChart>
@@ -243,7 +243,7 @@ export default function StudentDetail() {
           {trend && trend.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6EAF0" />
                 <XAxis
                   dataKey="predicho_en"
                   fontSize={12}
@@ -258,7 +258,7 @@ export default function StudentDetail() {
                   type="monotone"
                   dataKey="risk_percent"
                   name="Riesgo"
-                  stroke="#D14545"
+                  stroke="#D2604F"
                   strokeWidth={2}
                 />
               </LineChart>
