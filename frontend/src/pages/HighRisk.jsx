@@ -7,11 +7,14 @@ import { mensajeError } from '../lib/utils.js';
 
 export default function HighRisk() {
   const { data, isLoading, error } = useHighRisk();
+  const rows = [...(data ?? [])].sort(
+    (a, b) => Number(b.puntaje_riesgo) - Number(a.puntaje_riesgo),
+  );
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold flex items-center gap-2">
-        <AlertTriangle className="h-6 w-6 text-risk-high" /> Estudiantes en riesgo alto
+        <AlertTriangle className="h-6 w-6 text-risk-high" /> Estudiantes en riesgo alto o crítico
       </h1>
 
       {error && (
@@ -40,7 +43,7 @@ export default function HighRisk() {
                   </td>
                 </tr>
               )}
-              {data?.map((p) => (
+              {rows.map((p) => (
                 <tr key={p.id} className="border-b border-ink/5 hover:bg-primary-light/40">
                   <td className="px-5 py-3 tabular-nums">{p.alumnos?.matricula}</td>
                   <td className="px-5 py-3">
@@ -62,7 +65,7 @@ export default function HighRisk() {
                   </td>
                 </tr>
               ))}
-              {data?.length === 0 && (
+              {rows.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-5 py-6 text-ink/50">
                     Sin estudiantes en riesgo alto. 🎉

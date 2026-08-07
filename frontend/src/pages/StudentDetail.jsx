@@ -44,6 +44,16 @@ export default function StudentDetail() {
   }
 
   if (isLoading) return <p className="text-ink/60">Cargando expediente…</p>;
+  if (error) {
+    const noEncontrado = error.response?.status === 404;
+    return (
+      <p className="text-risk-high">
+        {noEncontrado
+          ? 'Estudiante no encontrado.'
+          : mensajeError(error, 'No fue posible cargar el expediente.')}
+      </p>
+    );
+  }
   if (!student) return <p className="text-risk-high">Estudiante no encontrado.</p>;
 
   const records = [...(student.historial_academico ?? [])].sort((a, b) =>

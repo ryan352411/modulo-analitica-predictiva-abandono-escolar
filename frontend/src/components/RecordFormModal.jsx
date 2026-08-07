@@ -3,12 +3,13 @@ import Modal from './ui/Modal.jsx';
 import { Field, Input, Select, Textarea } from './ui/Field.jsx';
 import { useCreateRecord } from '../hooks/useStudentMutations.js';
 
-const PERIODOS_2026 = ['2026-1', '2026-2', '2026-3'];
+const ANIO_ACTUAL = new Date().getFullYear();
+const PERIODOS = [`${ANIO_ACTUAL}-1`, `${ANIO_ACTUAL}-2`, `${ANIO_ACTUAL}-3`];
 
 const HOY = new Date().toISOString().slice(0, 10);
 
 const EMPTY = {
-  periodo: '2026-1',
+  periodo: PERIODOS[0],
   fecha_carga: HOY,
   promedio: '',
   tasa_asistencia: '',
@@ -57,9 +58,9 @@ export default function RecordFormModal({ studentId, open, onClose }) {
   return (
     <Modal open={open} onClose={onClose} title="Nuevo registro académico">
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Periodo" hint="Ciclo 2026">
+        <Field label="Periodo" hint={`Ciclo ${ANIO_ACTUAL}`}>
           <Select required value={form.periodo} onChange={set('periodo')}>
-            {PERIODOS_2026.map((p) => (
+            {PERIODOS.map((p) => (
               <option key={p} value={p}>
                 {p}
               </option>

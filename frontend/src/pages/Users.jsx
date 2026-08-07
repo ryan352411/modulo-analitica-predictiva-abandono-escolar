@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserPlus, KeyRound } from 'lucide-react';
+import { UserPlus, KeyRound, Pencil } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { Card, CardBody } from '../components/ui/Card.jsx';
 import Modal from '../components/ui/Modal.jsx';
@@ -19,6 +19,9 @@ export default function Users() {
   const [pwUser, setPwUser] = useState(null);
   const [pwValue, setPwValue] = useState('');
   const [pwError, setPwError] = useState('');
+  const [nameUser, setNameUser] = useState(null);
+  const [nameValue, setNameValue] = useState('');
+  const [nameError, setNameError] = useState('');
 
   const { data, isLoading, error: loadError } = useQuery({
     queryKey: ['users'],
@@ -62,6 +65,24 @@ export default function Users() {
         },
         onError: (err) =>
           setPwError(err.response?.data?.error || 'No fue posible cambiar la contraseña'),
+      },
+    );
+  }
+
+  function openName(u) {
+    setNameUser(u);
+    setNameValue(u.full_name);
+    setNameError('');
+  }
+
+  function submitName(e) {
+    e.preventDefault();
+    setNameError('');
+    update.mutate(
+      { id: nameUser.id, full_name: nameValue },
+      {
+        onSuccess: () => setNameUser(null),
+        onError: (err) => setNameError(mensajeError(err, 'No fue posible actualizar el nombre')),
       },
     );
   }
@@ -142,6 +163,12 @@ export default function Users() {
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-3">
                       <button
+                        onClick={() => openName(u)}
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </button>
+                      <button
                         onClick={() => openPassword(u)}
                         className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                       >
@@ -212,6 +239,42 @@ export default function Users() {
               className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
             >
               {create.isPending ? 'Creando…' : 'Crear usuario'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(nameUser)}
+        onClose={() => setNameUser(null)}
+        title={nameUser ? `Editar nombre de ${nameUser.full_name}` : 'Editar nombre'}
+      >
+        <form onSubmit={submitName} className="space-y-4">
+          <Field label="Nombre completo">
+            <Input
+              required
+              maxLength={120}
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value)}
+            />
+          </Field>
+
+          {nameError && <p className="text-sm text-risk-high">{nameError}</p>}
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setNameUser(null)}
+              className="rounded-md border border-ink/20 px-4 py-2 text-sm hover:bg-ink/5"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={update.isPending}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60"
+            >
+              {update.isPending ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
         </form>
