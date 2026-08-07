@@ -22,7 +22,7 @@ export default function StudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: student, isLoading } = useStudent(id);
+  const { data: student, isLoading, error } = useStudent(id);
   const { data: trend } = useStudentTrend(id);
   const predict = useGeneratePrediction(id);
   const deleteStudent = useDeleteStudent();
