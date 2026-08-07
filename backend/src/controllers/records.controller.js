@@ -75,6 +75,16 @@ export async function createRecord(req, res, next) {
       .select()
       .single();
 
+    if (error?.code === '23505') {
+      return res
+        .status(409)
+        .json({ error: 'Ya existe un registro para ese periodo en este alumno' });
+    }
+    if (error?.code === '23514') {
+      return res.status(422).json({
+        error: 'Los créditos obtenidos no pueden ser mayores que los créditos del periodo',
+      });
+    }
     if (error) throw error;
     await audit(req, 'CREATE', 'historial_academico', data.id, payload);
     res.status(201).json({ data });

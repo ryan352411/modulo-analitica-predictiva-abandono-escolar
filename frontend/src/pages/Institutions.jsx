@@ -5,7 +5,7 @@ import { api } from '../lib/api.js';
 import { Card, CardBody } from '../components/ui/Card.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import { Field, Input } from '../components/ui/Field.jsx';
-import { prefijoMatricula } from '../lib/utils.js';
+import { prefijoMatricula, mensajeError } from '../lib/utils.js';
 
 const EMPTY = { nombre: '', codigo: '', direccion: '' };
 
@@ -16,7 +16,7 @@ export default function Institutions() {
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: loadError } = useQuery({
     queryKey: ['institutions'],
     queryFn: async () => (await api.get('/institutions')).data.data,
   });
@@ -93,6 +93,12 @@ export default function Institutions() {
           </button>
         )}
       </div>
+
+      {loadError && (
+        <p className="text-sm text-risk-high">
+          {mensajeError(loadError, 'No fue posible cargar las escuelas.')}
+        </p>
+      )}
 
       <Card>
         <CardBody className="p-0">

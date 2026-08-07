@@ -31,6 +31,10 @@ export default function RecordFormModal({ studentId, open, onClose }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    if (Number(form.creditos_obtenidos) > Number(form.creditos_totales)) {
+      setError('Los créditos obtenidos no pueden ser mayores que los créditos del periodo');
+      return;
+    }
     try {
       await createRecord.mutateAsync({
         periodo: form.periodo,

@@ -6,7 +6,7 @@ import Modal from '../components/ui/Modal.jsx';
 import { useStudents, useBatchPredictions, useImportStudents } from '../hooks/useStudents.js';
 import { downloadReport } from '../lib/download.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { ESTATUS_ALUMNO } from '../lib/utils.js';
+import { ESTATUS_ALUMNO, mensajeError } from '../lib/utils.js';
 
 export default function Students() {
   const { user } = useAuth();
@@ -16,6 +16,7 @@ export default function Students() {
   const [page, setPage] = useState(1);
   const [notice, setNotice] = useState('');
   const [batchResult, setBatchResult] = useState(null);
+  const [importResult, setImportResult] = useState(null);
   const fileRef = useRef(null);
   const { data, isLoading, error } = useStudents({
     search,
@@ -41,11 +42,8 @@ export default function Students() {
     const reader = new FileReader();
     reader.onload = () => {
       importer.mutate(String(reader.result), {
-        onSuccess: (res) =>
-          setNotice(
-            `Importados ${res.imported} estudiantes${res.errors?.length ? `, ${res.errors.length} con error` : ''}.`,
-          ),
-        onError: (err) => setNotice(err.response?.data?.error || 'Error al importar el CSV.'),
+        onSuccess: (res) => setImportResult(res),
+        onError: (err) => setNotice(mensajeError(err, 'Error al importar el CSV.')),
       });
     };
     reader.readAsText(file);
@@ -151,6 +149,12 @@ export default function Students() {
         <div className="rounded-md bg-primary-light/60 px-4 py-2 text-sm text-ink/80">{notice}</div>
       )}
 
+      {error && (
+        <p className="text-sm text-risk-high">
+          {mensajeError(error, 'No fue posible cargar los estudiantes.')}
+        </p>
+      )}
+
       <Modal
         open={Boolean(batchResult)}
         onClose={() => setBatchResult(null)}
@@ -195,6 +199,51 @@ export default function Students() {
               </Link>
               <button
                 onClick={() => setBatchResult(null)}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(importResult)}
+        onClose={() => setImportResult(null)}
+        title="Resultado de la importación"
+      >
+        {importResult && (
+          <div className="space-y-4">
+            <p className="text-sm text-ink/70">
+              Se importaron <strong>{importResult.imported}</strong> estudiantes
+              {importResult.errors?.length
+                ? `, con ${importResult.errors.length} fila(s) con error:`
+                : ' sin errores.'}
+            </p>
+            {importResult.errors?.length > 0 && (
+              <div className="max-h-64 overflow-y-auto rounded-md border border-ink/10">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-ink/10 text-left text-ink/60">
+                      <th className="px-4 py-2 font-medium">Fila</th>
+                      <th className="px-4 py-2 font-medium">Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importResult.errors.map((e, i) => (
+                      <tr key={i} className="border-b border-ink/5">
+                        <td className="px-4 py-2 tabular-nums">{e.row}</td>
+                        <td className="px-4 py-2 text-ink/70">{e.error}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <button
+                onClick={() => setImportResult(null)}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
               >
                 Entendido

@@ -105,6 +105,9 @@ export async function generateBatch(req, res, next) {
     await audit(req, 'PREDICT_BATCH', 'predicciones', null, summary);
     res.status(201).json({ data: summary });
   } catch (e) {
+    if (e.status === 503) {
+      return res.status(503).json({ error: e.message });
+    }
     next(e);
   }
 }

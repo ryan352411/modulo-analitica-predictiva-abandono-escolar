@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { Card, CardBody } from '../components/ui/Card.jsx';
-import { cn, ESTATUS_ALERTA, SEVERIDAD_ALERTA } from '../lib/utils.js';
+import { cn, ESTATUS_ALERTA, SEVERIDAD_ALERTA, mensajeError } from '../lib/utils.js';
 
 const severityStyle = {
   info: 'bg-primary-light text-primary',
@@ -17,7 +17,7 @@ export default function Alerts() {
   const [estatus, setEstatus] = useState('');
   const [severidad, setSeveridad] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['alerts', { estatus, severidad }],
     queryFn: async () =>
       (
@@ -63,6 +63,12 @@ export default function Alerts() {
           </select>
         </div>
       </div>
+
+      {error && (
+        <p className="text-sm text-risk-high">
+          {mensajeError(error, 'No fue posible cargar las alertas.')}
+        </p>
+      )}
 
       {isLoading && <p className="text-ink/60">Cargando alertas…</p>}
 

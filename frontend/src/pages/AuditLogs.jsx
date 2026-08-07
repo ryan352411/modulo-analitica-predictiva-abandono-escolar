@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ScrollText } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { Card, CardBody } from '../components/ui/Card.jsx';
+import { mensajeError } from '../lib/utils.js';
 
 const ACTIONS = [
   '',
@@ -22,7 +23,7 @@ export default function AuditLogs() {
   const [accion, setAccion] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['audit-logs', { accion, page }],
     queryFn: async () =>
       (await api.get('/audit-logs', { params: { accion: accion || undefined, page, limit: 50 } }))
@@ -50,6 +51,12 @@ export default function AuditLogs() {
           ))}
         </select>
       </div>
+
+      {error && (
+        <p className="text-sm text-risk-high">
+          {mensajeError(error, 'No fue posible cargar la auditoría.')}
+        </p>
+      )}
 
       <Card>
         <CardBody className="p-0">

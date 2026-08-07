@@ -3,15 +3,22 @@ import { AlertTriangle } from 'lucide-react';
 import { Card, CardBody } from '../components/ui/Card.jsx';
 import RiskBadge from '../components/ui/RiskBadge.jsx';
 import { useHighRisk } from '../hooks/useStudents.js';
+import { mensajeError } from '../lib/utils.js';
 
 export default function HighRisk() {
-  const { data, isLoading } = useHighRisk();
+  const { data, isLoading, error } = useHighRisk();
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold flex items-center gap-2">
         <AlertTriangle className="h-6 w-6 text-risk-high" /> Estudiantes en riesgo alto
       </h1>
+
+      {error && (
+        <p className="text-sm text-risk-high">
+          {mensajeError(error, 'No fue posible cargar el listado de riesgo.')}
+        </p>
+      )}
 
       <Card>
         <CardBody className="p-0">

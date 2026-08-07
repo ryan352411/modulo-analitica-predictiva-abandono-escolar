@@ -3,12 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Cpu, RefreshCw } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { Card, CardHeader, CardBody } from '../components/ui/Card.jsx';
+import { mensajeError } from '../lib/utils.js';
 
 export default function ModelInfo() {
   const qc = useQueryClient();
   const [notice, setNotice] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['model-info'],
     queryFn: async () => (await api.get('/model/info')).data.data,
   });
@@ -46,6 +47,12 @@ export default function ModelInfo() {
 
       {notice && (
         <div className="rounded-md bg-primary-light/60 px-4 py-2 text-sm text-ink/80">{notice}</div>
+      )}
+
+      {error && (
+        <p className="text-sm text-risk-high">
+          {mensajeError(error, 'No fue posible cargar la información del modelo.')}
+        </p>
       )}
 
       {isLoading ? (

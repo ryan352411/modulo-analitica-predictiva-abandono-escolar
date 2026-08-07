@@ -6,6 +6,7 @@ import { Card, CardBody } from '../components/ui/Card.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import { Field, Input } from '../components/ui/Field.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { mensajeError } from '../lib/utils.js';
 
 export default function Careers() {
   const qc = useQueryClient();
@@ -16,7 +17,7 @@ export default function Careers() {
   const [nombre, setNombre] = useState('');
   const [error, setError] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: loadError } = useQuery({
     queryKey: ['careers'],
     queryFn: async () => (await api.get('/careers')).data.data,
   });
@@ -85,6 +86,12 @@ export default function Careers() {
           </button>
         )}
       </div>
+
+      {loadError && (
+        <p className="text-sm text-risk-high">
+          {mensajeError(loadError, 'No fue posible cargar las carreras.')}
+        </p>
+      )}
 
       <Card>
         <CardBody className="p-0">

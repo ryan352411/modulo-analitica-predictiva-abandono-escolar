@@ -6,7 +6,7 @@ import { Card, CardBody } from '../components/ui/Card.jsx';
 import Modal from '../components/ui/Modal.jsx';
 import { Field, Input, Select } from '../components/ui/Field.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { cn } from '../lib/utils.js';
+import { cn, mensajeError } from '../lib/utils.js';
 
 const EMPTY = { full_name: '', email: '', password: '', role: 'docente' };
 
@@ -20,7 +20,7 @@ export default function Users() {
   const [pwValue, setPwValue] = useState('');
   const [pwError, setPwError] = useState('');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: loadError } = useQuery({
     queryKey: ['users'],
     queryFn: async () => (await api.get('/users')).data.data,
   });
@@ -80,6 +80,12 @@ export default function Users() {
           <UserPlus className="h-4 w-4" /> Nuevo usuario
         </button>
       </div>
+
+      {loadError && (
+        <p className="text-sm text-risk-high">
+          {mensajeError(loadError, 'No fue posible cargar los usuarios.')}
+        </p>
+      )}
 
       <Card>
         <CardBody className="p-0">
