@@ -1,8 +1,76 @@
 # Revisión funcional — Módulo de Analítica Predictiva de Abandono Escolar
 
 > Auditoría de completitud funcional: cada capacidad de la API contra su contraparte en la interfaz, y estado de cada pantalla.
-> **Solo diagnóstico — no se modificó código.** Fecha: 2026-08-06.
+> **Diagnóstico + implementación.** El diagnóstico (secciones 1–9) se conserva sin cambios; la **sección 0** (abajo) registra qué se corrigió y dónde. Fecha: 2026-08-06.
 > Roles del sistema: `admin`, `coordinador`, `docente` (no existe `tutor`).
+
+---
+
+## 0. Estado de implementación (2026-08-06)
+
+Los hallazgos del diagnóstico (secciones 1–9, más abajo, sin modificar) se implementaron en la rama **`fix/revision-funcional`**; la rama `main` quedó intacta como punto de retorno. Se trabajó en 6 bloques + correcciones, con **un commit por bloque**. Verificación: `npm run build` compila sin errores ni advertencias nuevas (solo persiste la advertencia preexistente de tamaño de chunk); `node --check` pasa en los tres controladores backend tocados.
+
+### Estado por hallazgo
+
+| Hallazgo | Sev. | Estado | Dónde quedó |
+|---|---|---|---|
+| A-01 · Nivel `critico` sin color/etiqueta | Alta | ✅ Resuelto | `Dashboard.jsx` usa `riskHex` (fuente única) en el pie; `utils.js`/`RiskBadge.jsx`/`tailwind.config.js` ya traían `critico` y `risk.critical`. Verificado en Dashboard (pie + lista), StudentDetail y HighRisk. |
+| A-02 · Eliminar estudiante inalcanzable | Alta | ✅ Resuelto | `StudentDetail.jsx`: botón **solo admin**, confirmación de borrado físico en cascada, invalida la lista y navega. |
+| M-01 · Filtro por estatus en Students | Media | ✅ Resuelto | `Students.jsx` (selector `ESTATUS_ALUMNO`, reinicia a página 1) |
+| M-02 · Filtros en Alerts | Media | ✅ Resuelto | `Alerts.jsx` (estatus + severidad) |
+| M-03 · Descartar alertas | Media | ✅ Resuelto | `Alerts.jsx` (desde pendiente y en atención) |
+| M-04 · Evolución del score | Media | ✅ Resuelto | `useStudents.js` (`useStudentTrend`) + `StudentDetail.jsx` (LineChart + estado vacío) |
+| M-05 · Tendencia en Dashboard | Media | ✅ Resuelto | `dashboard.controller.js` (`risk_trend`) + `Dashboard.jsx` (gráfica) — ver salvedad 1 |
+| M-06 · Historial académico completo | Media | ✅ Resuelto | `StudentDetail.jsx` (tabla por periodo) |
+| M-07 · Guard de rol en el ruteo | Media | ✅ Resuelto | `ProtectedRoute.jsx` (prop `roles` + pantalla "Sin permisos") + `App.jsx` |
+| M-08 · Gatear controles con 403 | Media | ✅ Resuelto | `Students.jsx`, `StudentDetail.jsx`, `Careers.jsx` (`canManage`) |
+| M-09 · 503 del ML en el lote | Media | ✅ Resuelto | `predictions.controller.js` |
+| M-10 · Estado de error en consultas | Media | ✅ Resuelto | 8 pantallas (banner con `mensajeError`) — ver salvedad 4 |
+| M-11 · Detalle de filas inválidas del CSV | Media | ✅ Resuelto | `Students.jsx` (modal con fila + motivo) |
+| §8 · Restricciones 409/422 + validación créditos | Media | ✅ Resuelto | `records.controller.js` + `RecordFormModal.jsx` — ver salvedad 2 |
+| B-01 · KPI "recientes" engañoso | Baja | ✅ Resuelto (vía M-05) | `Dashboard.jsx` usa `total_predictions` (conteo real) |
+| B-02 · HighRisk título/orden | Baja | ✅ Resuelto | `HighRisk.jsx` ("alto o crítico", orden por `puntaje_riesgo` desc) |
+| B-03 · AuditLogs filtros | Baja | ✅ Resuelto | `AuditLogs.jsx` (usuario + fecha inicio + fecha fin) |
+| B-04 · Users editar nombre | Baja | ✅ Resuelto | `Users.jsx` (modal) |
+| B-05 · Alerts sin estado de error | Baja | ✅ Resuelto (vía M-10) | `Alerts.jsx` |
+| B-06 · Periodos fijos en 2026 | Baja | ✅ Resuelto | `RecordFormModal.jsx` (derivados del año en curso) |
+| B-07 · StudentDetail 404 vs otros errores | Baja | ✅ Resuelto | `StudentDetail.jsx` |
+| B-08 · Fila vacía en Users | Baja | ⏭️ Omitido a propósito | Autorizado a omitir; Users siempre tiene al menos al admin. |
+| B-09 · Google login | — | ➖ Sin código | Solo requiere las variables `GOOGLE_CLIENT_ID` + `VITE_GOOGLE_CLIENT_ID`. |
+
+**Total: 2/2 altas, 11/11 medias y 6/6 bajas accionables resueltas.** B-08 omitida (autorizado), B-09 no requiere código.
+
+### Resumen de cambios por archivo
+
+**Backend**
+- `controllers/dashboard.controller.js` — agrega `total_predictions` (conteo real) y `risk_trend` (promedio de riesgo por mes, cronológico) al `data` del summary. *(M-05, B-01)*
+- `controllers/predictions.controller.js` — `generateBatch` traduce el error 503 del microservicio igual que la predicción individual. *(M-09)*
+- `controllers/records.controller.js` — `createRecord` mapea `23505` (periodo duplicado) → **409** y `23514` (créditos) → **422**. *(§8)*
+
+**Frontend**
+- `components/layout/ProtectedRoute.jsx` — acepta `roles` y, si el rol no alcanza, muestra una pantalla explícita "Sin permisos". *(M-07)*
+- `App.jsx` — envuelve `/usuarios`, `/escuelas`, `/modelo` y `/auditoria` con `<ProtectedRoute roles={['admin']}>`. *(M-07)*
+- `hooks/useStudents.js` — agrega `useStudentTrend(id)`. *(M-04)*
+- `pages/Dashboard.jsx` — pie con `riskHex`, KPI `total_predictions`, gráfica de tendencia. *(A-01, M-05, B-01)*
+- `pages/StudentDetail.jsx` — botón eliminar (admin) + gateo de "Editar", gráfica de evolución del score, tabla de historial académico, distinción de 404. *(A-02, M-08, M-04, M-06, B-07)*
+- `pages/Students.jsx` — filtro por estatus, gateo de "Nuevo"/exportación, banner de error, modal de errores de CSV. *(M-01, M-08, M-10, M-11)*
+- `pages/Alerts.jsx` — filtros de estatus/severidad, botón "Descartar", banner de error. *(M-02, M-03, M-10, B-05)*
+- `pages/Careers.jsx` — gateo de crear/editar/eliminar por rol, banner de error. *(M-08, M-10)*
+- `pages/HighRisk.jsx` — título "alto o crítico", orden por score, banner de error. *(B-02, M-10)*
+- `pages/AuditLogs.jsx` — filtros por usuario/fecha, banner de error. *(B-03, M-10)*
+- `pages/Users.jsx` — editar nombre completo, banner de error. *(B-04, M-10)*
+- `pages/Institutions.jsx` — banner de error. *(M-10)*
+- `pages/ModelInfo.jsx` — banner de error. *(M-10)*
+- `components/RecordFormModal.jsx` — validación de créditos en cliente, periodos derivados del año actual. *(§8, B-06)*
+
+*(No se tocó: `utils.js` y `tailwind.config.js` ya traían `critico`/`risk.critical` y los ayudantes; no se modificó `ml-service/`, ni nombres de tablas/columnas/rutas, ni se agregó borrado de usuarios, ni se cambió `docente`→`tutor`.)*
+
+### Salvedades (leer)
+
+1. **M-05 (tendencia)** se calcula sobre las **últimas 500 predicciones** (el límite que ya tenía la consulta del summary), agrupadas por mes. Es una tendencia *reciente*, no la historia completa. `total_predictions`, en cambio, **sí** es el conteo real (consulta `count` aparte).
+2. **§8 (`23514` → 422)**: el mensaje asume que el CHECK que falla es el de **créditos** (`creditos_obtenidos <= creditos_totales`). Los demás campos con CHECK (promedio, asistencia, reprobadas…) ya se validan por rango en el cliente, así que en la práctica el `23514` que llega al backend es el de créditos. Si se agrega otro CHECK a la tabla, el mensaje podría quedar impreciso.
+3. **A-01 en Alerts**: la pantalla de Alertas muestra **severidad** (`critica`), no el nivel de riesgo, y esa severidad ya estaba coloreada por su propio `severityStyle`. El nivel `critico` (badge de `RiskBadge`) se verificó en **Dashboard, StudentDetail y HighRisk**; en Alerts no aplica un badge de nivel de riesgo.
+4. **M-10** se implementó como **banner rojo** bajo el encabezado de cada pantalla (usando `mensajeError`), en lugar de reemplazar toda la vista, para no ocultar los filtros/controles ante un error transitorio. Conserva el estilo visual de `Dashboard.jsx:13` (`text-risk-high`).
 
 ---
 
