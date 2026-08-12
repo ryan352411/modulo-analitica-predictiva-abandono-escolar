@@ -643,7 +643,7 @@ Deno.serve(async (req) => {
         if (rows.length > 1000) return json({ error: "Maximo 1000 estudiantes por importacion" }, 400);
 
         const payloads: Record<string, unknown>[] = [];
-        const errors: { row: number; error: string }[] = [];
+        const errors: { row?: number; matricula?: string; error: string }[] = [];
         rows.forEach((raw, idx) => {
           const payload = buildStudentPayload(raw, user.institution_id);
           if (!payload.matricula || !payload.nombre_completo) {
@@ -654,9 +654,32 @@ Deno.serve(async (req) => {
         });
         if (!payloads.length) return json({ error: "Ninguna fila valida", errors }, 400);
 
+        // Rechaza matriculas que ya pertenecen a OTRA institucion: el upsert por
+        // onConflict: 'matricula' sobrescribiria ese registro ajeno (matricula es
+        // unica global). Solo se importan las que no colisionan con otra escuela.
+        const matriculas = payloads.map((p) => p.matricula);
+        const { data: existentes, error: existErr } = await supabase
+          .from("alumnos")
+          .select("matricula, institucion_id")
+          .in("matricula", matriculas);
+        if (existErr) throw existErr;
+        const ajenas = new Set(
+          (existentes ?? [])
+            .filter((e: { institucion_id?: string }) => e.institucion_id !== user.institution_id)
+            .map((e: { matricula?: string }) => e.matricula),
+        );
+        const safePayloads = payloads.filter((p) => {
+          if (ajenas.has(p.matricula)) {
+            errors.push({ matricula: String(p.matricula), error: "La matricula pertenece a otra institucion" });
+            return false;
+          }
+          return true;
+        });
+        if (!safePayloads.length) return json({ error: "Ninguna fila valida", errors }, 409);
+
         const { data, error } = await supabase
           .from("alumnos")
-          .upsert(payloads, { onConflict: "matricula" })
+          .upsert(safePayloads, { onConflict: "matricula" })
           .select("id, matricula, nombre_completo");
         if (error) throw error;
         await audit(user, req, "IMPORT", "alumnos", null, { imported: data.length, errors: errors.length });

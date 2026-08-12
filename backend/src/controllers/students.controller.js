@@ -278,9 +278,33 @@ export async function importStudents(req, res, next) {
       return res.status(400).json({ error: 'Ninguna fila valida', errors });
     }
 
+    // Rechaza matriculas que ya pertenecen a OTRA institucion: el upsert por
+    // onConflict: 'matricula' sobrescribiria ese registro ajeno (matricula es
+    // unica global). Solo se importan las que no colisionan con otra escuela.
+    const matriculas = payloads.map((p) => p.matricula);
+    const { data: existentes, error: existErr } = await supabase
+      .from('alumnos')
+      .select('matricula, institucion_id')
+      .in('matricula', matriculas);
+    if (existErr) throw existErr;
+    const ajenas = new Set(
+      (existentes ?? []).filter((e) => e.institucion_id !== institutionId).map((e) => e.matricula),
+    );
+    const safePayloads = payloads.filter((p) => {
+      if (ajenas.has(p.matricula)) {
+        errors.push({ matricula: p.matricula, error: 'La matricula pertenece a otra institucion' });
+        return false;
+      }
+      return true;
+    });
+
+    if (!safePayloads.length) {
+      return res.status(409).json({ error: 'Ninguna fila valida', errors });
+    }
+
     const { data, error } = await supabase
       .from('alumnos')
-      .upsert(payloads, { onConflict: 'matricula' })
+      .upsert(safePayloads, { onConflict: 'matricula' })
       .select('id, matricula, nombre_completo');
     if (error) throw error;
 
