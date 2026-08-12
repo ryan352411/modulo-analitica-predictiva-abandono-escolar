@@ -24,9 +24,9 @@ const navItems = [
   { to: '/alertas', label: 'Alertas', icon: Bell },
   { to: '/escuelas', label: 'Escuelas', icon: School, adminOnly: true },
   { to: '/usuarios', label: 'Usuarios', icon: ShieldCheck, adminOnly: true },
-  { to: '/modelo', label: 'Modelo IA', icon: Cpu, adminOnly: true },
+  { to: '/modelo', label: 'Algoritmo de predicción', icon: Cpu, adminOnly: true },
   { to: '/auditoria', label: 'Auditoría', icon: ScrollText, adminOnly: true },
-  { to: '/api-rest', label: 'API REST', icon: Code2 },
+  { to: '/api-rest', label: 'API DOCS', icon: Code2 },
 ];
 
 export default function AppLayout() {
