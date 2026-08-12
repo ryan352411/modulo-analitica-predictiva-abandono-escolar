@@ -14,6 +14,9 @@ Este proyecto incluye un blueprint (`render.yaml`) que crea 3 servicios en Rende
 2. Conecta el repo `ryan352411/modulo-analitica-predictiva-abandono-escolar`.
 3. Render leerá `render.yaml`. Te pedirá los valores marcados como secretos:
    - **SUPABASE_SERVICE_KEY** → pega la *service key* de Supabase (la del `.env` local, empieza con `sb_secret_...`). **Nunca la subas al repo.**
+   - **GEMINI_API_KEY** → pega tu API key de Google Gemini (asistente de IA: nivel
+     socioeconómico e intervenciones). Sin ella, esos endpoints responden 503 y el resto
+     de la app funciona igual. La obtienes en https://aistudio.google.com/apikey
 4. **Apply** y espera a que los 3 servicios queden en verde (el primer build del ML tarda porque entrena el modelo).
 
 ## Después del primer deploy — verifica las URLs

@@ -51,6 +51,11 @@ services:
       # Origen permitido por CORS: debe ser la URL del frontend.
       - key: FRONTEND_URL
         value: https://abandono-web.onrender.com
+      # Asistente de IA (Google Gemini). La key es secreta → se captura en el panel.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
 
   # 3) Frontend (Vite build servido como sitio estático) ---------------------
   - type: web
