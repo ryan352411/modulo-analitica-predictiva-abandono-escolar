@@ -12,7 +12,7 @@ export default function ApiDocs() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold">API REST</h1>
+          <h1 className="text-2xl font-semibold">API DOCS</h1>
           <p className="text-ink/60 text-sm">
             Documentación interactiva (Swagger / OpenAPI) del backend.
           </p>

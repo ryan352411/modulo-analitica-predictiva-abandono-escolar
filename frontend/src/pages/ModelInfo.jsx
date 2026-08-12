@@ -30,7 +30,7 @@ export default function ModelInfo() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <Cpu className="h-6 w-6 text-primary" /> Modelo de IA
+          <Cpu className="h-6 w-6 text-primary" /> Algoritmo de predicción
         </h1>
         <button
           onClick={() => {
