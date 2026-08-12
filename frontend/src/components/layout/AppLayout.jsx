@@ -11,6 +11,7 @@ import {
   ScrollText,
   School,
   BookOpen,
+  Code2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { cn } from '../../lib/utils.js';
@@ -25,6 +26,7 @@ const navItems = [
   { to: '/usuarios', label: 'Usuarios', icon: ShieldCheck, adminOnly: true },
   { to: '/modelo', label: 'Modelo IA', icon: Cpu, adminOnly: true },
   { to: '/auditoria', label: 'Auditoría', icon: ScrollText, adminOnly: true },
+  { to: '/api-rest', label: 'API REST', icon: Code2 },
 ];
 
 export default function AppLayout() {

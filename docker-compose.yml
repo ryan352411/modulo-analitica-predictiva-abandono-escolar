@@ -28,6 +28,8 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       ML_SERVICE_URL: http://ml-service:8000
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-latest}
     depends_on:
       - ml-service
 

@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/layout/ProtectedRoute.jsx';
 import AppLayout from './components/layout/AppLayout.jsx';
@@ -15,6 +16,7 @@ import Careers from './pages/Careers.jsx';
 import HighRisk from './pages/HighRisk.jsx';
 import ModelInfo from './pages/ModelInfo.jsx';
 import AuditLogs from './pages/AuditLogs.jsx';
+const ApiDocs = lazy(() => import('./pages/ApiDocs.jsx'));
 
 export default function App() {
   return (
@@ -32,6 +34,14 @@ export default function App() {
           <Route path="/riesgo-alto" element={<HighRisk />} />
           <Route path="/alertas" element={<Alerts />} />
           <Route path="/carreras" element={<Careers />} />
+          <Route
+            path="/api-rest"
+            element={
+              <Suspense fallback={<p className="text-ink/60">Cargando documentación…</p>}>
+                <ApiDocs />
+              </Suspense>
+            }
+          />
           <Route element={<ProtectedRoute roles={['admin']} />}>
             <Route path="/usuarios" element={<Users />} />
             <Route path="/escuelas" element={<Institutions />} />

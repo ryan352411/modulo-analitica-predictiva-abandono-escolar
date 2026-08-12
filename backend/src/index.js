@@ -18,6 +18,7 @@ import careerRoutes from './routes/careers.routes.js';
 import modelRoutes from './routes/model.routes.js';
 import auditRoutes from './routes/audit.routes.js';
 import reportRoutes from './routes/reports.routes.js';
+import aiRoutes from './routes/ai.routes.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -31,6 +32,8 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Spec en JSON para renderizar Swagger dentro del frontend (apartado "API REST").
+app.get('/api/docs.json', (_req, res) => res.json(swaggerSpec));
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'abandono-escolar-api' }));
 app.use('/api/auth', authRoutes);
@@ -45,6 +48,7 @@ app.use('/api/careers', careerRoutes);
 app.use('/api/model', modelRoutes);
 app.use('/api/audit-logs', auditRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

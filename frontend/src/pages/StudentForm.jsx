@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, HelpCircle } from 'lucide-react';
 import { Card, CardBody } from '../components/ui/Card.jsx';
 import { Field, Input, Select } from '../components/ui/Field.jsx';
 import { useStudent, usePrograms } from '../hooks/useStudents.js';
 import { useCreateStudent, useUpdateStudent } from '../hooks/useStudentMutations.js';
+import SocioeconomicModal from '../components/SocioeconomicModal.jsx';
 
 const EMPTY = {
   matricula: '',
@@ -32,6 +33,7 @@ export default function StudentForm() {
 
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
+  const [socioOpen, setSocioOpen] = useState(false);
 
   useEffect(() => {
     if (student) {
@@ -130,6 +132,13 @@ export default function StudentForm() {
                 <option value="medio_alto">Medio alto</option>
                 <option value="alto">Alto</option>
               </Select>
+              <button
+                type="button"
+                onClick={() => setSocioOpen(true)}
+                className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+              >
+                <HelpCircle className="h-3.5 w-3.5" /> No sé mi nivel socioeconómico
+              </button>
             </Field>
             <Field label="Programa educativo">
               <Select required value={form.programa} onChange={set('programa')}>
@@ -192,6 +201,12 @@ export default function StudentForm() {
           </form>
         </CardBody>
       </Card>
+
+      <SocioeconomicModal
+        open={socioOpen}
+        onClose={() => setSocioOpen(false)}
+        onApply={(nivel) => setForm((f) => ({ ...f, nivel_socioeconomico: nivel }))}
+      />
     </div>
   );
 }

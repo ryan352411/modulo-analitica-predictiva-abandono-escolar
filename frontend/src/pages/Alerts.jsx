@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { Card, CardBody } from '../components/ui/Card.jsx';
+import InterventionModal from '../components/InterventionModal.jsx';
 import { cn, ESTATUS_ALERTA, SEVERIDAD_ALERTA, mensajeError } from '../lib/utils.js';
 
 const severityStyle = {
@@ -16,6 +18,7 @@ export default function Alerts() {
   const qc = useQueryClient();
   const [estatus, setEstatus] = useState('');
   const [severidad, setSeveridad] = useState('');
+  const [intervencion, setIntervencion] = useState(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['alerts', { estatus, severidad }],
@@ -106,6 +109,14 @@ export default function Alerts() {
                 <span className="text-xs capitalize text-ink/60">
                   {a.estatus?.replace('_', ' ')}
                 </span>
+                {a.alumno_id && (
+                  <button
+                    onClick={() => setIntervencion(a)}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Sugerir intervención (IA)
+                  </button>
+                )}
                 {a.estatus === 'pendiente' && (
                   <button
                     onClick={() => update.mutate({ id: a.id, status: 'en_atencion' })}
@@ -141,6 +152,12 @@ export default function Alerts() {
           </p>
         )}
       </div>
+
+      <InterventionModal
+        open={Boolean(intervencion)}
+        alert={intervencion}
+        onClose={() => setIntervencion(null)}
+      />
     </div>
   );
 }

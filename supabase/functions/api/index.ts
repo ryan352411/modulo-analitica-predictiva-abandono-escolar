@@ -74,6 +74,24 @@ const RECORD_FIELDS = [
   "observaciones",
 ];
 
+const NIVELES = ["bajo", "medio_bajo", "medio", "medio_alto", "alto"];
+const NIVEL_LABEL: Record<string, string> = {
+  bajo: "Bajo",
+  medio_bajo: "Medio bajo",
+  medio: "Medio",
+  medio_alto: "Medio alto",
+  alto: "Alto",
+};
+const SOCIO_SCHEMA = {
+  type: "object",
+  properties: {
+    nivel: { type: "string", enum: NIVELES },
+    justificacion: { type: "string" },
+    puntaje: { type: "integer" },
+  },
+  required: ["nivel", "justificacion"],
+};
+
 function pick(input: Record<string, unknown>, fields: string[]) {
   const payload: Record<string, unknown> = {};
   for (const field of fields) {
@@ -378,6 +396,110 @@ async function mlFetch(path: string, options: RequestInit = {}, timeout = 8000) 
   return res.json();
 }
 
+// ---- Gemini (Google Generative Language API) ------------------------------
+function geminiEnabled() {
+  return Boolean(Deno.env.get("GEMINI_API_KEY"));
+}
+
+async function geminiGenerate(
+  prompt: string,
+  opts: { temperature?: number; responseSchema?: unknown; timeout?: number } = {},
+): Promise<string> {
+  const key = Deno.env.get("GEMINI_API_KEY");
+  const model = Deno.env.get("GEMINI_MODEL") || "gemini-flash-latest";
+  const generationConfig: Record<string, unknown> = { temperature: opts.temperature ?? 0.4 };
+  if (opts.responseSchema) {
+    generationConfig.responseMimeType = "application/json";
+    generationConfig.responseSchema = opts.responseSchema;
+  }
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig }),
+      signal: AbortSignal.timeout(opts.timeout ?? 20000),
+    },
+  );
+  if (!res.ok) {
+    let detail = "";
+    try {
+      detail = (await res.json())?.error?.message ?? "";
+    } catch { /* ignore */ }
+    throw new Error(`Gemini respondió ${res.status}${detail ? `: ${detail}` : ""}`);
+  }
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+  if (!text.trim()) throw new Error("Gemini devolvió una respuesta vacía");
+  return text.trim();
+}
+
+// ---- OpenAPI (para el apartado "API REST" del frontend) -------------------
+const OPENAPI_SPEC = {
+  openapi: "3.0.0",
+  info: {
+    title: "API — Módulo de Analítica Predictiva de Abandono Escolar",
+    version: "1.0.0",
+    description:
+      "API REST del sistema de predicción de abandono escolar (Edge Function de Supabase). " +
+      "Incluye asistente de IA (Gemini) para estimar nivel socioeconómico y sugerir intervenciones.",
+  },
+  servers: [{ url: "/functions/v1/api" }],
+  components: {
+    securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" } },
+  },
+  security: [{ bearerAuth: [] }],
+  paths: {
+    "/auth/login": { post: { tags: ["Auth"], summary: "Iniciar sesión", security: [] } },
+    "/auth/refresh": { post: { tags: ["Auth"], summary: "Renovar token de acceso", security: [] } },
+    "/auth/me": { get: { tags: ["Auth"], summary: "Usuario autenticado" } },
+    "/auth/logout": { post: { tags: ["Auth"], summary: "Cerrar sesión" } },
+    "/dashboard/summary": { get: { tags: ["Dashboard"], summary: "Resumen del tablero" } },
+    "/students": {
+      get: { tags: ["Students"], summary: "Listar estudiantes (paginado y filtros)" },
+      post: { tags: ["Students"], summary: "Crear estudiante" },
+    },
+    "/students/import": { post: { tags: ["Students"], summary: "Importar estudiantes desde CSV" } },
+    "/students/{id}": {
+      get: { tags: ["Students"], summary: "Detalle de estudiante" },
+      put: { tags: ["Students"], summary: "Actualizar estudiante" },
+      delete: { tags: ["Students"], summary: "Eliminar estudiante" },
+    },
+    "/students/{id}/trend": { get: { tags: ["Students"], summary: "Evolución de riesgo" } },
+    "/records": { post: { tags: ["Records"], summary: "Capturar registro académico" } },
+    "/records/student/{id}": { get: { tags: ["Records"], summary: "Historial académico del estudiante" } },
+    "/predictions/student/{id}": {
+      get: { tags: ["Predictions"], summary: "Predicciones del estudiante" },
+      post: { tags: ["Predictions"], summary: "Generar predicción" },
+    },
+    "/predictions/batch": { post: { tags: ["Predictions"], summary: "Predicción por lotes" } },
+    "/predictions/high-risk": { get: { tags: ["Predictions"], summary: "Estudiantes de riesgo alto" } },
+    "/alerts": { get: { tags: ["Alerts"], summary: "Listar alertas" } },
+    "/alerts/{id}": { patch: { tags: ["Alerts"], summary: "Actualizar estatus de alerta" } },
+    "/users": {
+      get: { tags: ["Users"], summary: "Listar usuarios" },
+      post: { tags: ["Users"], summary: "Crear usuario" },
+    },
+    "/users/{id}": { patch: { tags: ["Users"], summary: "Actualizar usuario" } },
+    "/audit-logs": { get: { tags: ["Audit"], summary: "Bitácora de auditoría" } },
+    "/reports/export": { get: { tags: ["Reports"], summary: "Exportar reporte CSV" } },
+    "/model/info": { get: { tags: ["Model"], summary: "Información del modelo" } },
+    "/model/retrain": { post: { tags: ["Model"], summary: "Reentrenar modelo" } },
+    "/ai/socioeconomic": {
+      post: {
+        tags: ["IA"],
+        summary: "Estimar nivel socioeconómico con IA (Gemini) a partir de un cuestionario",
+      },
+    },
+    "/ai/intervention": {
+      post: {
+        tags: ["IA"],
+        summary: "Recomendar intervención para un estudiante en riesgo con IA (Gemini)",
+      },
+    },
+  },
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (!secretKey || !supabaseUrl) return json({ error: "Servidor sin configuracion Supabase" }, 500);
@@ -392,6 +514,10 @@ Deno.serve(async (req) => {
   try {
     if (req.method === "GET" && path === "/health") {
       return json({ status: "ok", service: "abandono-escolar-edge-api" });
+    }
+
+    if (req.method === "GET" && (path === "/docs.json" || path === "/docs")) {
+      return json(OPENAPI_SPEC);
     }
 
     if (req.method === "POST" && path === "/auth/login") {
@@ -859,6 +985,118 @@ Deno.serve(async (req) => {
       const result = await mlFetch("/retrain", { method: "POST" }, 120000);
       await audit(user, req, "RETRAIN", "model", null, result);
       return json({ data: result });
+    }
+
+    if (parts[0] === "ai" && req.method === "POST" && parts[1] === "socioeconomic") {
+      if (!geminiEnabled()) {
+        return json({ error: "Asistente de IA no disponible: configura GEMINI_API_KEY" }, 503);
+      }
+      const body = await readBody(req);
+      const respuestas = body?.respuestas;
+      if (!respuestas || typeof respuestas !== "object" || !Object.keys(respuestas).length) {
+        return json({ error: 'Envía las respuestas del cuestionario en "respuestas"' }, 400);
+      }
+      const lista = Object.entries(respuestas).map(([k, v]) => `- ${k}: ${v}`).join("\n");
+      const prompt =
+        "Eres un asistente que clasifica el nivel socioeconómico de un estudiante en México " +
+        "con base en indicadores tipo AMAI (escolaridad del jefe de familia, ingreso del hogar, " +
+        "características de la vivienda, bienes y servicios). A partir de las siguientes respuestas " +
+        "de un cuestionario, determina el nivel socioeconómico más adecuado.\n\n" +
+        `Respuestas del cuestionario:\n${lista}\n\n` +
+        "Devuelve un JSON con:\n" +
+        "- \"nivel\": uno de bajo, medio_bajo, medio, medio_alto, alto.\n" +
+        "- \"justificacion\": explicación breve (1-2 frases) en español, dirigida al usuario.\n" +
+        "- \"puntaje\": un entero de 0 a 100 (0 = más bajo, 100 = más alto).";
+      const raw = await geminiGenerate(prompt, { temperature: 0.2, responseSchema: SOCIO_SCHEMA });
+      let parsed: Record<string, unknown> = {};
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        const m = raw.match(/\{[\s\S]*\}/);
+        if (m) parsed = JSON.parse(m[0]);
+      }
+      const nivel = NIVELES.includes(parsed?.nivel as string) ? (parsed.nivel as string) : "medio";
+      await audit(user, req, "AI_SOCIOECONOMIC", "ai", null, { nivel });
+      return json({
+        data: {
+          nivel,
+          nivel_label: NIVEL_LABEL[nivel],
+          justificacion: (parsed?.justificacion as string) || "",
+          puntaje: typeof parsed?.puntaje === "number" ? parsed.puntaje : null,
+        },
+      });
+    }
+
+    if (parts[0] === "ai" && req.method === "POST" && parts[1] === "intervention") {
+      if (!geminiEnabled()) {
+        return json({ error: "Asistente de IA no disponible: configura GEMINI_API_KEY" }, 503);
+      }
+      const body = await readBody(req);
+      let studentId = body?.student_id as string | undefined;
+      if (!studentId && body?.alert_id) {
+        const { data: alerta } = await supabase
+          .from("alertas")
+          .select("alumno_id, alumnos!inner(institucion_id)")
+          .eq("id", body.alert_id)
+          .eq("alumnos.institucion_id", user.institution_id)
+          .maybeSingle();
+        studentId = alerta?.alumno_id as string | undefined;
+      }
+      if (!studentId) return json({ error: "Envía student_id o alert_id" }, 400);
+
+      const { data: student, error } = await supabase
+        .from("alumnos")
+        .select(
+          "*, historial_academico(*), predicciones(puntaje_riesgo, nivel_riesgo, factores_contribuyentes, predicho_en)",
+        )
+        .eq("id", studentId)
+        .eq("institucion_id", user.institution_id)
+        .single();
+      if (error || !student) return json({ error: "Estudiante no encontrado" }, 404);
+
+      const historial = [...((student.historial_academico as Record<string, unknown>[]) ?? [])]
+        .sort((a, b) => String(a.periodo).localeCompare(String(b.periodo)))
+        .slice(-4);
+      const prediccion = [...((student.predicciones as Record<string, unknown>[]) ?? [])].sort(
+        (a, b) => new Date(b.predicho_en as string).getTime() - new Date(a.predicho_en as string).getTime(),
+      )[0];
+      const factores = ((prediccion?.factores_contribuyentes as { label?: string; importance?: number }[]) ?? [])
+        .map((f) => `${f.label} (${Math.round((f.importance ?? 0) * 100)}%)`)
+        .join(", ");
+      const historialTexto = historial.length
+        ? historial
+            .map(
+              (r) =>
+                `Periodo ${r.periodo}: promedio ${r.promedio}, asistencia ${r.tasa_asistencia}%, ` +
+                `reprobadas ${r.materias_reprobadas}, entregas pendientes ${r.entregas_pendientes ?? "N/D"}`,
+            )
+            .join("\n")
+        : "Sin registros académicos capturados.";
+
+      const prompt =
+        "Eres un orientador educativo experto en prevención del abandono escolar en México. " +
+        "Con base en el perfil del estudiante, recomienda un plan de intervención concreto y accionable " +
+        "para el tutor o coordinador. Responde en español, en formato Markdown, con secciones breves: " +
+        "1) Diagnóstico rápido, 2) Acciones recomendadas (lista priorizada de 3 a 5 acciones), " +
+        "3) Canalización o apoyos sugeridos, 4) Seguimiento propuesto. Sé específico y empático; " +
+        "no inventes datos que no aparezcan en el perfil.\n\n" +
+        "Perfil del estudiante:\n" +
+        `- Nombre: ${student.nombre_completo}\n` +
+        `- Programa: ${student.programa ?? "N/D"}\n` +
+        `- Semestre: ${student.semestre_actual ?? "N/D"}\n` +
+        `- Nivel socioeconómico: ${NIVEL_LABEL[student.nivel_socioeconomico as string] ?? student.nivel_socioeconomico ?? "N/D"}\n` +
+        `- Estatus: ${student.estatus ?? "N/D"}\n` +
+        (prediccion
+          ? `- Riesgo de abandono: ${(Number(prediccion.puntaje_riesgo) * 100).toFixed(1)}% (nivel ${prediccion.nivel_riesgo})\n` +
+            `- Factores principales: ${factores || "N/D"}\n`
+          : "- Sin predicción de riesgo registrada.\n") +
+        `\nHistorial académico reciente:\n${historialTexto}`;
+
+      const recomendacion = await geminiGenerate(prompt, { temperature: 0.5, timeout: 25000 });
+      await audit(user, req, "AI_INTERVENTION", "alumnos", studentId, null);
+      return json({
+        data: { student_id: studentId, student_name: student.nombre_completo, recomendacion },
+      });
     }
 
     return json({ error: "Recurso no encontrado" }, 404);

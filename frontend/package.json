@@ -18,6 +18,7 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.25.0",
     "recharts": "^2.12.7",
+    "swagger-ui-react": "^5.32.13",
     "tailwind-merge": "^2.4.0"
   },
   "devDependencies": {
