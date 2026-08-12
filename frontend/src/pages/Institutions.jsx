@@ -82,7 +82,7 @@ export default function Institutions() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <School className="h-6 w-6 text-primary" /> Escuelas
+          <School className="h-6 w-6 text-primary" /> Escuela
         </h1>
         {data?.length === 0 && (
           <button

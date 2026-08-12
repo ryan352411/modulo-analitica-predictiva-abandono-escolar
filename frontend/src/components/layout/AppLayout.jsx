@@ -22,7 +22,7 @@ const navItems = [
   { to: '/carreras', label: 'Carreras', icon: BookOpen, roles: ['admin', 'coordinador'] },
   { to: '/riesgo-alto', label: 'Riesgo alto', icon: AlertTriangle },
   { to: '/alertas', label: 'Alertas', icon: Bell },
-  { to: '/escuelas', label: 'Escuelas', icon: School, adminOnly: true },
+  { to: '/escuelas', label: 'Escuela', icon: School, adminOnly: true },
   { to: '/usuarios', label: 'Usuarios', icon: ShieldCheck, adminOnly: true },
   { to: '/modelo', label: 'Algoritmo de predicción', icon: Cpu, adminOnly: true },
   { to: '/auditoria', label: 'Auditoría', icon: ScrollText, adminOnly: true },
